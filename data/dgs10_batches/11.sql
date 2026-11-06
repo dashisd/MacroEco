@@ -1,0 +1,1 @@
+select count(*)::int as ohlc_n from public.series_ohlc where indicator_id='dgs10';

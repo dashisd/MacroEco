@@ -1,0 +1,1 @@
+update public.indicators set name='30Y 国债收益率', source_hint='WSJ TMUBMUSD30Y' where id='dgs30';

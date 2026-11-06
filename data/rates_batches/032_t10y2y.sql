@@ -1,0 +1,1 @@
+update public.indicators set name='10Y-2Y 利差', source_hint='WSJ 10Y-2Y market spread' where id='t10y2y';

@@ -1,0 +1,1 @@
+insert into public.observations (indicator_id,as_of,reference_period,actual,unit,source_url,evidence_grade,data_quality,updated_at) values ('dgs10','2026-11-05','2026-11-05',4.839,'%','https://www.wsj.com/market-data/quotes/bond/BX/TMUBMUSD10Y','E2','OK',now());

@@ -1,0 +1,1 @@
+delete from public.observations where indicator_id='t10y2y';

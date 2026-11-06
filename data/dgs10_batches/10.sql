@@ -1,0 +1,1 @@
+update public.indicators set name='10Y 国债收益率', source_hint='WSJ/MarketWatch TMUBMUSD10Y (market OHLC)' where id='dgs10';
