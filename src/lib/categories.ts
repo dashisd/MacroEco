@@ -31,6 +31,11 @@ export const SERIES_PRESETS: { id: string; label: string; ids: string[] }[] = [
     ids: ['sp500', 'nasdaq', 'dji', 'wti', 'brent', 'gold_comex', 'btc'],
   },
   {
+    id: 'etf_rs',
+    label: 'ETF 相对强弱',
+    ids: ['spy_rsp', 'qqq_spy', 'iwm_spy', 'xlk_xlf', 'hyg_lqd'],
+  },
+  {
     id: 'all',
     label: '全部',
     ids: [], // special: use all available

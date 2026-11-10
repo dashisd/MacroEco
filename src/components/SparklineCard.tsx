@@ -87,7 +87,7 @@ export function SparklineCard({
             ? {
                 symbol: 'circle',
                 symbolSize: 7,
-                data: [{ coord: [points.length - 1, vals[vals.length - 1]], itemStyle: { color } }],
+                data: [{ name: 'last', coord: [points.length - 1, vals[vals.length - 1]], itemStyle: { color } }],
                 label: { show: false },
               }
             : undefined,

@@ -121,6 +121,12 @@ export const SERIES_COLORS: Record<string, string> = {
   // 信用
   hy_oas: '#ec4899', // pink
   ig_oas: '#c026d3', // magenta
+  // ETF 相对强弱（etf_ratio_series，调整后收盘）
+  spy_rsp: '#38bdf8',
+  qqq_spy: '#a3e635',
+  iwm_spy: '#fb7185',
+  xlk_xlf: '#f472b6',
+  hyg_lqd: '#fdba74',
 }
 
 /** Fallback palette when an id has no fixed color — spaced hues for dark bg. */

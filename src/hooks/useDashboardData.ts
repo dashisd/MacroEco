@@ -13,6 +13,7 @@ import type {
 } from '../types/database'
 import { DEFAULT_SERIES_IDS } from '../types/database'
 import { SERIES_PRESETS } from '../lib/categories'
+import { ETF_RATIO_ID_SET, etfRatioIndicators, fetchEtfRatioPoints } from '../lib/etf'
 
 /** Sparkline pilots — always included in series_1y fetch (~5Y closes; cards slice 1Y). */
 export const SPARKLINE_PILOT_IDS = [
@@ -266,7 +267,7 @@ export function useDashboardData(): DashboardState {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tick, reportDate, windowLabel])
 
-  // ——— Effect B: series_1y only ———
+  // ——— Effect B: series_1y + client-merged etf_ratio_series ———
   // Reloads when rangeDays / tick / enabled series change — NOT windowLabel.
   useEffect(() => {
     let cancelled = false
@@ -289,11 +290,22 @@ export function useDashboardData(): DashboardState {
             ...enabledSeries,
             ...presetIds,
           ]),
-        ]
+        ].filter((id) => !ETF_RATIO_ID_SET.has(id))
         const seriesRows = await fetchSeriesForIds(neededIds, since)
+        // ETF ratios stay in etf_ratio_series. Merge here so the shared preset
+        // can draw them without writing observations or series_1y.
+        let ratioPoints: SeriesPoint[] = []
+        try {
+          ratioPoints = await fetchEtfRatioPoints(since)
+        } catch (ratioError) {
+          if (!cancelled) {
+            setError(ratioError instanceof Error ? ratioError.message : String(ratioError))
+          }
+        }
         if (cancelled) return
-        setSeries(seriesRows)
-        seriesPresentRef.current = seriesRows.length > 0
+        const merged = [...seriesRows, ...ratioPoints]
+        setSeries(merged)
+        seriesPresentRef.current = merged.length > 0
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : String(e))
@@ -365,13 +377,24 @@ export function useDashboardData(): DashboardState {
     )
   }, [metaList, reportDate, windowLabel])
 
+  const indicatorsWithRatios = useMemo(() => {
+    const seen = new Set(indicators.map((i) => i.id))
+    const extra = etfRatioIndicators().filter((i) => !seen.has(i.id))
+    return extra.length ? [...indicators, ...extra] : indicators
+  }, [indicators])
+
   const availableSeriesIds = useMemo(() => {
     const fromData = new Set(series.map((s) => s.indicator_id))
     const defaults = DEFAULT_SERIES_IDS.filter((id) => fromData.has(id))
     const extras = [...fromData].filter(
-      (id) => !defaults.includes(id as (typeof DEFAULT_SERIES_IDS)[number]),
+      (id) =>
+        !defaults.includes(id as (typeof DEFAULT_SERIES_IDS)[number]) &&
+        !ETF_RATIO_ID_SET.has(id),
     )
-    return [...defaults, ...extras.sort()]
+    const ratios = [...ETF_RATIO_ID_SET].filter((id) => fromData.has(id))
+    const ratioOrder = ['spy_rsp', 'qqq_spy', 'iwm_spy', 'xlk_xlf', 'hyg_lqd']
+    ratios.sort((a, b) => ratioOrder.indexOf(a) - ratioOrder.indexOf(b))
+    return [...defaults, ...extras.sort(), ...ratios]
   }, [series])
 
   const toggleSeries = useCallback((id: string) => {
@@ -390,7 +413,7 @@ export function useDashboardData(): DashboardState {
     loading,
     error,
     connected: supabaseConfigured && !error,
-    indicators,
+    indicators: indicatorsWithRatios,
     indicatorCount: indicators.length,
     metaList,
     activeMeta,

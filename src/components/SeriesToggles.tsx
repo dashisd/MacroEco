@@ -9,6 +9,8 @@ interface Props {
   rangeDays: number
   focusedId: string | null
   activePresetId: string | null
+  /** Limit which category buttons render. Defaults to every shared preset. */
+  presetIds?: string[]
   onToggle: (id: string) => void
   onRangeChange: (days: number) => void
   onFocus: (id: string | null) => void
@@ -30,6 +32,7 @@ export function SeriesToggles({
   rangeDays,
   focusedId,
   activePresetId,
+  presetIds,
   onToggle,
   onRangeChange,
   onFocus,
@@ -38,12 +41,16 @@ export function SeriesToggles({
   const nameOf = (id: string) =>
     indicators.find((i) => i.id === id)?.name ?? id.toUpperCase()
 
+  const presets = presetIds
+    ? SERIES_PRESETS.filter((p) => presetIds.includes(p.id))
+    : SERIES_PRESETS
+
   const applyPreset = (presetId: string) => {
     if (presetId === 'all') {
       onApplyPreset('all', [...availableIds])
       return
     }
-    const preset = SERIES_PRESETS.find((p) => p.id === presetId)
+    const preset = presets.find((p) => p.id === presetId)
     if (!preset) return
     const ids = preset.ids.filter((id) => availableIds.includes(id))
     onApplyPreset(presetId, ids)
@@ -73,7 +80,7 @@ export function SeriesToggles({
 
       <div className="flex flex-wrap gap-1.5">
         <span className="mr-1 self-center text-[11px] text-slate-500">类别</span>
-        {SERIES_PRESETS.map((p) => {
+        {presets.map((p) => {
           const count =
             p.id === 'all'
               ? availableIds.length
@@ -87,7 +94,7 @@ export function SeriesToggles({
               onClick={() => applyPreset(p.id)}
               title={
                 count === 0
-                  ? '该类别暂无 series_1y 数据'
+                  ? '该类别暂无序列数据'
                   : `启用 ${count} 条可用序列`
               }
               className={`rounded-full border px-2.5 py-1 text-xs transition disabled:cursor-not-allowed disabled:opacity-40 ${

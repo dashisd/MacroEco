@@ -10,6 +10,8 @@ interface Props {
   indicators: Indicator[]
   focusedId: string | null
   loading: boolean
+  asideHint?: string
+  emptyHint?: string
   onSeriesFocus: (id: string | null) => void
 }
 
@@ -257,6 +259,8 @@ export function SeriesChart({
   indicators,
   focusedId,
   loading,
+  asideHint = '点击图例可联动右侧解释',
+  emptyHint = '`series_1y` 尚为空。日更写入后，默认展示 S&P 500 与 NASDAQ。当前已通过只读密钥连上 Supabase。',
   onSeriesFocus,
 }: Props) {
   const nameOf = (id: string) =>
@@ -367,7 +371,7 @@ export function SeriesChart({
           width: focusedId === id ? 3 : 1.8,
           opacity: dimmed ? 0.18 : 1,
           color,
-          type: (dashMap.get(id) ?? 'solid') as string | number[],
+          type: (dashMap.get(id) ?? 'solid') as 'solid' | number[],
         },
         itemStyle: { color },
         emphasis: { focus: 'series' as const },
@@ -399,6 +403,7 @@ export function SeriesChart({
               label: { show: false },
               data: [
                 {
+                  name: 'last',
                   coord: [dates[last.index], last.value],
                   value: last.value,
                 },
@@ -488,7 +493,7 @@ export function SeriesChart({
             清除聚焦（{focusedId}）
           </button>
         ) : (
-          <span className="text-xs text-slate-500">点击图例可联动右侧解释</span>
+          <span className="text-xs text-slate-500">{asideHint}</span>
         )}
       </div>
 
@@ -499,10 +504,7 @@ export function SeriesChart({
       ) : !hasData ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
           <p className="text-sm font-medium text-slate-300">暂无时序数据</p>
-          <p className="max-w-md text-xs leading-relaxed text-slate-500">
-            `series_1y` 尚为空。日更写入后，默认展示 S&P 500 与 NASDAQ。
-            当前已通过只读密钥连上 Supabase。
-          </p>
+          <p className="max-w-md text-xs leading-relaxed text-slate-500">{emptyHint}</p>
         </div>
       ) : (
         <ReactECharts
