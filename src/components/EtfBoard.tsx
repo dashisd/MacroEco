@@ -7,6 +7,15 @@ import { SparklineCard } from './SparklineCard'
 
 type EtfState = ReturnType<typeof useEtfData>
 
+/** Same 4-up slot as macro chart groups in LatestReadings. */
+const SLOT_CLASS = 'w-[calc((100%-1.5rem)/4)] shrink-0'
+
+function chunkRows<T>(items: T[], size: number): T[][] {
+  const rows: T[][] = []
+  for (let i = 0; i < items.length; i += size) rows.push(items.slice(i, i + size))
+  return rows
+}
+
 export function EtfBoard({ etf }: { etf: EtfState }) {
   const [modalTicker, setModalTicker] = useState<string | null>(null)
   const modal = modalTicker
@@ -36,18 +45,26 @@ export function EtfBoard({ etf }: { etf: EtfState }) {
                   {group.label}
                   <span className="ml-2 font-normal text-slate-600">{group.cards.length}</span>
                 </h3>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  {group.cards.map((card) => (
-                    <SparklineCard
-                      key={card.ticker}
-                      indicatorId={card.ticker}
-                      name={card.name}
-                      observation={card.observation}
-                      series={etf.closeSeries}
-                      unit="USD"
-                      active={modalTicker === card.ticker}
-                      onOpen={() => setModalTicker(card.ticker)}
-                    />
+                <div className="flex flex-col gap-2">
+                  {chunkRows(group.cards, 4).map((row, ri) => (
+                    <div
+                      key={`${group.id}-r${ri}`}
+                      className="flex flex-row flex-nowrap justify-start gap-2"
+                    >
+                      {row.map((card) => (
+                        <div key={card.ticker} className={SLOT_CLASS}>
+                          <SparklineCard
+                            indicatorId={card.ticker}
+                            name={card.name}
+                            observation={card.observation}
+                            series={etf.closeSeries}
+                            unit="USD"
+                            active={modalTicker === card.ticker}
+                            onOpen={() => setModalTicker(card.ticker)}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   ))}
                 </div>
               </div>
