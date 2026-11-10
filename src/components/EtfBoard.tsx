@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { useEtfData } from '../hooks/useEtfData'
+import { ETF_PAGE_PRESET_IDS } from '../lib/etf'
 import { SeriesChart } from './SeriesChart'
 import { SeriesDetailModal } from './SeriesDetailModal'
 import { SeriesToggles } from './SeriesToggles'
@@ -80,7 +81,7 @@ export function EtfBoard({ etf }: { etf: EtfState }) {
         rangeDays={etf.rangeDays}
         focusedId={etf.focusedId}
         activePresetId={etf.activePresetId}
-        presetIds={['etf_rs']}
+        presetIds={ETF_PAGE_PRESET_IDS}
         onToggle={etf.toggleSeries}
         onRangeChange={etf.setRangeDays}
         onFocus={etf.setFocusedId}
@@ -88,7 +89,7 @@ export function EtfBoard({ etf }: { etf: EtfState }) {
       />
 
       <SeriesChart
-        series={etf.ratioSeries}
+        series={etf.chartSeries}
         enabledIds={etf.enabledSeries}
         indicators={etf.indicators}
         focusedId={etf.focusedId}

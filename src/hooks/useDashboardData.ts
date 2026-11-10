@@ -13,7 +13,7 @@ import type {
 } from '../types/database'
 import { DEFAULT_SERIES_IDS } from '../types/database'
 import { SERIES_PRESETS } from '../lib/categories'
-import { ETF_RATIO_ID_SET, etfRatioIndicators, fetchEtfRatioPoints } from '../lib/etf'
+import { ETF_RATIO_ID_SET, ETF_TICKER_SET, etfRatioIndicators, fetchEtfRatioPoints } from '../lib/etf'
 
 /** Sparkline pilots — always included in series_1y fetch (~5Y closes; cards slice 1Y). */
 export const SPARKLINE_PILOT_IDS = [
@@ -306,7 +306,7 @@ export function useDashboardData(): DashboardState {
             ...enabledSeries,
             ...presetIds,
           ]),
-        ].filter((id) => !ETF_RATIO_ID_SET.has(id))
+        ].filter((id) => !ETF_RATIO_ID_SET.has(id) && !ETF_TICKER_SET.has(id))
         const seriesRows = await fetchSeriesForIds(neededIds, since)
         // ETF ratios stay in etf_ratio_series. Merge here so the shared preset
         // can draw them without writing observations or series_1y.

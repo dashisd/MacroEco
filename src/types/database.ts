@@ -129,6 +129,21 @@ export const SERIES_COLORS: Record<string, string> = {
   // 信用
   hy_oas: '#ec4899', // pink
   ig_oas: '#c026d3', // magenta
+  // ETF 行情（etf_prices close）
+  SPY: '#2563eb',
+  RSP: '#059669',
+  QQQ: '#7c3aed',
+  IWM: '#db2777',
+  XLK: '#0284c7',
+  XLF: '#ca8a04',
+  XLI: '#0f766e',
+  XLE: '#c2410c',
+  XLV: '#be185d',
+  XLP: '#4d7c0f',
+  XLU: '#6366f1',
+  HYG: '#b45309',
+  LQD: '#0e7490',
+  TLT: '#9333ea',
   // ETF 相对强弱（etf_ratio_series，调整后收盘）
   spy_rsp: '#38bdf8',
   qqq_spy: '#a3e635',

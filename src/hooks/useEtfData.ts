@@ -5,6 +5,8 @@ import {
   ETF_GROUP_ORDER,
   ETF_PRESET_ID,
   ETF_RATIO_IDS,
+  ETF_TICKERS,
+  etfPriceIndicators,
   etfRatioIndicators,
   fetchEtfPrices,
   fetchEtfRatioPoints,
@@ -140,9 +142,18 @@ export function useEtfData(active: boolean) {
     }))
   }, [universe, prices, ohlc])
 
-  const indicators = useMemo<Indicator[]>(() => etfRatioIndicators(), [])
+  const indicators = useMemo<Indicator[]>(
+    () => [...etfPriceIndicators(), ...etfRatioIndicators()],
+    [],
+  )
 
-  const availableSeriesIds = ETF_RATIO_IDS
+  const availableSeriesIds = [...ETF_TICKERS, ...ETF_RATIO_IDS]
+
+  const chartSeries = useMemo(() => {
+    const since = daysAgoIso(rangeDays)
+    const closes = closeSeries.filter((point) => point.date >= since)
+    return [...closes, ...ratioSeries]
+  }, [closeSeries, ratioSeries, rangeDays])
 
   const asOf = useMemo(() => {
     let latest = ''
@@ -182,6 +193,7 @@ export function useEtfData(active: boolean) {
     groups,
     closeSeries,
     ratioSeries,
+    chartSeries,
     indicators,
     availableSeriesIds,
     asOf,

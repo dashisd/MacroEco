@@ -7,6 +7,7 @@ import { NotesPanel } from './components/NotesPanel'
 import { LatestReadings } from './components/LatestReadings'
 import { EtfBoard } from './components/EtfBoard'
 import { useDashboardData } from './hooks/useDashboardData'
+import { MACRO_TOGGLE_PRESET_IDS } from './lib/categories'
 import { useEtfData } from './hooks/useEtfData'
 import type { ReportNote } from './types/database'
 
@@ -116,6 +117,7 @@ export default function App() {
               rangeDays={d.rangeDays}
               focusedId={d.focusedIndicatorId}
               activePresetId={d.activePresetId}
+              presetIds={MACRO_TOGGLE_PRESET_IDS}
               onToggle={d.toggleSeries}
               onRangeChange={d.setRangeDays}
               onFocus={d.setFocusedIndicatorId}

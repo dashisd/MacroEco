@@ -55,7 +55,14 @@ export const ETF_RATIO_IDS = ETF_RATIOS.map((r) => r.id)
 
 export const ETF_RATIO_ID_SET = new Set(ETF_RATIO_IDS)
 
+export const ETF_TICKERS = ETF_CATALOG.map((entry) => entry.ticker)
+
+export const ETF_TICKER_SET = new Set(ETF_TICKERS)
+
 export const ETF_PRESET_ID = 'etf_rs'
+
+/** ETF page 序列开关. Macro keeps its own list and does not show these price groups. */
+export const ETF_PAGE_PRESET_IDS = ['etf_broad', 'etf_sector', 'etf_credit', 'etf_rs']
 
 const PAGE = 1000
 
@@ -63,6 +70,18 @@ export function asNumber(value: unknown): number | null {
   if (value == null || value === '') return null
   const n = typeof value === 'number' ? value : Number(value)
   return Number.isFinite(n) ? n : null
+}
+
+export function etfPriceIndicators(): Indicator[] {
+  return ETF_CATALOG.map((entry) => ({
+    id: entry.ticker,
+    name: entry.ticker,
+    category: 'etf_price',
+    frequency: 'D',
+    unit: 'USD',
+    source_hint: 'etf_prices · close',
+    created_at: null,
+  }))
 }
 
 export function etfRatioIndicators(): Indicator[] {

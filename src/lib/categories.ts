@@ -1,3 +1,17 @@
+import { ETF_CATALOG, ETF_GROUP_ORDER, type EtfGroupId } from './etf'
+
+const ETF_GROUP_PRESET_IDS: Record<EtfGroupId, string> = {
+  broad: 'etf_broad',
+  sector: 'etf_sector',
+  credit_rates: 'etf_credit',
+}
+
+const ETF_GROUP_PRESETS = ETF_GROUP_ORDER.map((group) => ({
+  id: ETF_GROUP_PRESET_IDS[group.id],
+  label: group.label,
+  ids: ETF_CATALOG.filter((entry) => entry.group_id === group.id).map((entry) => entry.ticker),
+}))
+
 /** Chart series category presets (indicator ids). */
 export const SERIES_PRESETS: { id: string; label: string; ids: string[] }[] = [
   {
@@ -30,6 +44,7 @@ export const SERIES_PRESETS: { id: string; label: string; ids: string[] }[] = [
     label: '市场',
     ids: ['sp500', 'nasdaq', 'dji', 'wti', 'brent', 'gold_comex', 'btc'],
   },
+  ...ETF_GROUP_PRESETS,
   {
     id: 'etf_rs',
     label: 'ETF 相对强弱',
@@ -40,6 +55,18 @@ export const SERIES_PRESETS: { id: string; label: string; ids: string[] }[] = [
     label: '全部',
     ids: [], // special: use all available
   },
+]
+
+/** Macro 同框 categories. ETF price groups stay on the ETF page. */
+export const MACRO_TOGGLE_PRESET_IDS = [
+  'rates',
+  'bei',
+  'pce_cpi',
+  'vol',
+  'credit',
+  'market',
+  'etf_rs',
+  'all',
 ]
 
 /** Groups that use sparkline cards and 4-per-row layout (v2.1). */
