@@ -16,7 +16,7 @@ interface Props {
 }
 
 const EPS = 1e-12
-const MAG_RATIO = 5
+const MAG_RATIO = 2
 
 /** YYYY-MM-DD → Sat/Sun (UTC noon to avoid TZ edge). */
 function isWeekend(iso: string): boolean {
@@ -151,7 +151,7 @@ function latestValue(values: (number | null)[]): { index: number; value: number 
   return null
 }
 
-/** Assign yAxisIndex by magnitude: if any pair differs by ≥5×, split into 2 right axes. */
+/** Assign yAxisIndex by magnitude: if any pair differs by ≥2×, split into 2 right axes. */
 function assignYAxes(
   ids: string[],
   dataById: Map<string, (number | null)[]>,
@@ -214,7 +214,7 @@ function assignYAxes(
       }
     }
   } else {
-    // Single bucket but ratio ≥5 (edge): split by median abs
+    // Single bucket but ratio ≥2 (edge): split by median abs
     const sorted = [...scales].sort((a, b) => a.abs - b.abs)
     const mid = Math.floor(sorted.length / 2)
     const lowIds = new Set(sorted.slice(0, mid).map((s) => s.id))
