@@ -5,6 +5,10 @@ export type NoteSection =
   | 'marginal'
   | 'observe'
   | 'market_structure'
+  | 'market_narrative'
+  | 'fupeng'
+  | 'strategy_1w'
+  | 'etf_flows'
   | 'data_gaps'
 
 export type Importance = 'critical' | 'high' | 'normal' | 'low'
@@ -93,6 +97,10 @@ export const SECTION_LABELS: Record<NoteSection, string> = {
   marginal: '重要边际变化',
   observe: '观察项（一句带过）',
   market_structure: '市场结构',
+  market_narrative: '市场叙述',
+  fupeng: '付鹏结构',
+  strategy_1w: '未来1周策略',
+  etf_flows: 'ETF资金流',
   data_gaps: '数据缺口与卡点',
 }
 

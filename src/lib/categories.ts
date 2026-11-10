@@ -42,14 +42,75 @@ export const SERIES_PRESETS: { id: string; label: string; ids: string[] }[] = [
   },
 ]
 
-/** Latest-readings panel groups (display order). */
-export const READING_GROUPS: { id: string; label: string; match: (indicatorId: string, category: string | null) => boolean }[] = [
+/** Groups that use sparkline cards and 4-per-row layout (v2.1). */
+export const READING_CHART_GROUP_IDS = new Set(['rates', 'market', 'vol'])
+
+/** Preferred indicator order within a reading group. */
+export const READING_ITEM_ORDER: Record<string, string[]> = {
+  rates: ['dgs2', 'dgs10', 'dgs30', 't10y2y', 'dfii10', 'acmtp10'],
+  market: ['sp500', 'nasdaq', 'dji', 'wti', 'brent', 'gold_comex', 'btc'],
+  vol: ['vix', 'vixeq', 'vixeq_vix_ratio'],
+  inflation: [
+    'pce_core_yoy',
+    'pce_yoy',
+    'cpi_core_yoy',
+    'cpi_yoy',
+    't10yie',
+    't5yie',
+    'pce_mom',
+    'pce_core_mom',
+    'cpi_mom',
+  ],
+  labor: [
+    'unrate',
+    'initial_claims',
+    'payems_chg',
+    'adp_private',
+    'productivity_nfb_qoq_saar',
+    'unit_labor_costs_nfb_qoq_saar',
+    'jolts_openings',
+    'jolts_rate',
+    'ahe_yoy',
+    'payems',
+  ],
+  fed: [
+    'fed_funds_target_upper',
+    'fed_funds_target_lower',
+    'tga',
+    'wdtgal',
+    'wresbal',
+    'walcl',
+    'on_rrp',
+    'tga_close',
+  ],
+  credit: ['hy_oas', 'ig_oas', 'cds_crwv_5y', 'cds_meta_5y', 'cds_googl_5y', 'cds_nvda_5y'],
+}
+
+/** Latest-readings panel groups (display order). v2.1: 国债 → 市场 → 波动 first. */
+export const READING_GROUPS: {
+  id: string
+  label: string
+  match: (indicatorId: string, category: string | null) => boolean
+}[] = [
   {
     id: 'rates',
     label: '国债',
     match: (id, cat) =>
       ['dgs2', 'dgs10', 'dgs30', 't10y2y', 'dfii10', 'acmtp10'].includes(id) ||
       cat === 'rates',
+  },
+  {
+    id: 'market',
+    label: '市场',
+    match: (id, cat) =>
+      ['sp500', 'nasdaq', 'dji', 'wti', 'brent', 'gold_comex', 'btc'].includes(id) ||
+      cat === 'market',
+  },
+  {
+    id: 'vol',
+    label: '波动',
+    match: (id, cat) =>
+      ['vix', 'vixeq', 'vixeq_vix_ratio'].includes(id) || (cat === 'vol' && id !== 'dspx'),
   },
   {
     id: 'inflation',
@@ -83,21 +144,12 @@ export const READING_GROUPS: { id: string; label: string; match: (indicatorId: s
       cat === 'liquidity',
   },
   {
-    id: 'vol',
-    label: '波动',
-    match: (id, cat) => ['vix', 'vixeq', 'vixeq_vix_ratio'].includes(id) || (cat === 'vol' && id !== 'dspx'),
-  },
-  {
-    id: 'market',
-    label: '市场',
-    match: (id, cat) =>
-      ['sp500', 'nasdaq', 'dji', 'wti', 'brent', 'gold_comex', 'btc'].includes(id) ||
-      cat === 'market',
-  },
-  {
     id: 'credit',
     label: '信用',
-    match: (id, cat) => ['hy_oas', 'ig_oas'].includes(id) || cat === 'credit',
+    match: (id, cat) =>
+      ['hy_oas', 'ig_oas', 'cds_meta_5y', 'cds_googl_5y', 'cds_nvda_5y', 'cds_crwv_5y'].includes(
+        id,
+      ) || cat === 'credit',
   },
 ]
 

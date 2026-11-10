@@ -8,7 +8,7 @@ import { LatestReadings } from './components/LatestReadings'
 import { EtfBoard } from './components/EtfBoard'
 import { useDashboardData } from './hooks/useDashboardData'
 import { useEtfData } from './hooks/useEtfData'
-import type { ReportNote, WindowLabel } from './types/database'
+import type { ReportNote } from './types/database'
 
 function initialModule(): BoardModule {
   if (typeof window === 'undefined') return 'macro'
@@ -53,14 +53,12 @@ export default function App() {
         meta={d.activeMeta}
         metaList={d.metaList}
         reportDate={d.reportDate}
-        windowLabel={d.windowLabel}
         indicatorCount={d.indicatorCount}
         etfAsOf={etf.asOf}
         statusDetail={etfMode ? `${etf.loadedTickers}/14 只 ETF` : null}
         loading={etfMode ? etf.loading : d.loading}
         connected={etfMode ? etf.connected : d.connected}
         error={etfMode ? etf.error : d.error}
-        onWindowChange={(w: WindowLabel) => d.setWindowLabel(w)}
         onReportDateChange={d.setReportDate}
         onRefresh={() => {
           d.refresh()

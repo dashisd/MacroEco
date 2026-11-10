@@ -1,4 +1,4 @@
-import type { ReportMeta, WindowLabel } from '../types/database'
+import type { ReportMeta } from '../types/database'
 import { formatDateOnly, formatShanghai } from '../lib/format'
 
 export type BoardModule = 'macro' | 'etf'
@@ -9,14 +9,12 @@ interface Props {
   meta: ReportMeta | null
   metaList: ReportMeta[]
   reportDate: string | null
-  windowLabel: WindowLabel
   indicatorCount: number
   etfAsOf?: string | null
   statusDetail?: string | null
   loading: boolean
   connected: boolean
   error: string | null
-  onWindowChange: (w: WindowLabel) => void
   onReportDateChange: (d: string | null) => void
   onRefresh: () => void
 }
@@ -27,14 +25,12 @@ export function TopBar({
   meta,
   metaList,
   reportDate,
-  windowLabel,
   indicatorCount,
   etfAsOf,
   statusDetail,
   loading,
   connected,
   error,
-  onWindowChange,
   onReportDateChange,
   onRefresh,
 }: Props) {
@@ -52,6 +48,11 @@ export function TopBar({
             <span className="rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 text-xs text-slate-400">
               {etf ? 'US ETF Board' : 'US Short-term Macro'}
             </span>
+            {etf ? null : (
+              <span className="rounded-full bg-cyan-500/20 px-2.5 py-0.5 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/40">
+                近一周
+              </span>
+            )}
           </div>
           {etf ? (
             <p className="mt-1 text-sm text-slate-400">
@@ -102,43 +103,19 @@ export function TopBar({
           </div>
 
           {etf ? null : (
-          <div className="inline-flex rounded-lg border border-slate-700 bg-slate-900 p-0.5">
-            {(
-              [
-                { id: '1w' as const, label: '1周' },
-                { id: '2_4w' as const, label: '2—4周' },
-              ] as const
-            ).map((w) => (
-              <button
-                key={w.id}
-                type="button"
-                onClick={() => onWindowChange(w.id)}
-                className={`rounded-md px-3 py-1.5 text-sm transition ${
-                  windowLabel === w.id
-                    ? 'bg-cyan-500/20 text-cyan-200 shadow-sm ring-1 ring-cyan-400/40'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {w.label}
-              </button>
-            ))}
-          </div>
-          )}
-
-          {etf ? null : (
-          <select
-            className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200 outline-none focus:ring-1 focus:ring-cyan-400/50"
-            value={reportDate ?? ''}
-            onChange={(e) => onReportDateChange(e.target.value || null)}
-            disabled={!dates.length}
-          >
-            {!dates.length && <option value="">暂无报告日</option>}
-            {dates.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
+            <select
+              className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200 outline-none focus:ring-1 focus:ring-cyan-400/50"
+              value={reportDate ?? ''}
+              onChange={(e) => onReportDateChange(e.target.value || null)}
+              disabled={!dates.length}
+            >
+              {!dates.length && <option value="">暂无报告日</option>}
+              {dates.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
           )}
 
           <button

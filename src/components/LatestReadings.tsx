@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Indicator, Observation, OhlcBar, SeriesPoint } from '../types/database'
-import { READING_GROUPS } from '../lib/categories'
+import {
+  READING_CHART_GROUP_IDS,
+  READING_GROUPS,
+  READING_ITEM_ORDER,
+} from '../lib/categories'
 import { SparklineCard } from './SparklineCard'
 import { SeriesDetailModal } from './SeriesDetailModal'
 
@@ -26,6 +30,23 @@ function formatActual(obs: Observation): string {
   if (abs >= 1e6) return `${(n / 1e6).toFixed(2)}M`
   if (Number.isInteger(n)) return String(n)
   return n.toFixed(Math.abs(n) >= 100 ? 1 : 2)
+}
+
+function chunkRows<T>(items: T[], size: number): T[][] {
+  const rows: T[][] = []
+  for (let i = 0; i < items.length; i += size) rows.push(items.slice(i, i + size))
+  return rows
+}
+
+function sortByPreferred(items: Observation[], groupId: string): Observation[] {
+  const order = READING_ITEM_ORDER[groupId] ?? []
+  const rank = new Map(order.map((id, i) => [id, i]))
+  return items.slice().sort((a, b) => {
+    const ra = rank.get(a.indicator_id) ?? 1000
+    const rb = rank.get(b.indicator_id) ?? 1000
+    if (ra !== rb) return ra - rb
+    return a.indicator_id.localeCompare(b.indicator_id)
+  })
 }
 
 const SPARKLINE_PILOT_IDS = new Set([
@@ -60,7 +81,6 @@ export function LatestReadings({
 }: Props) {
   const [modalId, setModalId] = useState<string | null>(null)
 
-  // Lazy-fetch OHLC when detail modal opens
   useEffect(() => {
     if (!modalId) return
     void ensureOhlc(modalId)
@@ -79,7 +99,6 @@ export function LatestReadings({
         o.actual != null &&
         !HIDDEN_READING_IDS.has(o.indicator_id),
     )
-    // One row per indicator: keep latest as_of (then highest id).
     const best = new Map<string, Observation>()
     for (const o of filtered) {
       const prev = best.get(o.indicator_id)
@@ -105,7 +124,13 @@ export function LatestReadings({
         return g.match(o.indicator_id, cat)
       })
       for (const o of items) assigned.add(o.indicator_id)
-      if (items.length) groups.push({ id: g.id, label: g.label, items })
+      if (items.length) {
+        groups.push({
+          id: g.id,
+          label: g.label,
+          items: sortByPreferred(items, g.id),
+        })
+      }
     }
 
     const other = visible.filter((o) => !assigned.has(o.indicator_id))
@@ -137,87 +162,105 @@ export function LatestReadings({
         <p className="text-sm text-slate-400">读数加载中…</p>
       ) : visible.length === 0 ? (
         <p className="text-sm text-slate-500">
-          该报告日暂无 observations。日更写入后按国债 / PCE·CPI / 就业等分类展示。
+          该报告日暂无 observations。日更写入后按国债 / 市场 / 波动等分类展示。
         </p>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {grouped.map((g) => (
-            <div
-              key={g.id}
-              className="rounded-xl border border-slate-800/80 bg-slate-950/50 p-2.5"
-            >
-              <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                {g.label}
-              </h3>
-              <ul className="space-y-1.5">
-                {g.items.map((o) => {
-                  const ind = indMap.get(o.indicator_id)
-                  const active = focusedId === o.indicator_id
-                  const isNa =
-                    o.data_quality === 'NA' || o.actual == null
-                  const useSpark = SPARKLINE_PILOT_IDS.has(o.indicator_id)
+        <div className="flex flex-col gap-2.5">
+          {grouped.map((g) => {
+            const chartGroup = READING_CHART_GROUP_IDS.has(g.id)
+            const cols = chartGroup ? 4 : 6
+            const rows = chunkRows(g.items, cols)
+            const slotClass =
+              cols === 4
+                ? 'w-[calc((100%-1.5rem)/4)] shrink-0'
+                : 'w-[calc((100%-2.5rem)/6)] shrink-0'
 
-                  if (useSpark) {
-                    return (
-                      <li key={o.id || o.indicator_id}>
-                        <SparklineCard
-                          indicatorId={o.indicator_id}
-                          name={ind?.name ?? o.indicator_id}
-                          observation={o}
-                          series={series}
-                          unit={o.unit || ind?.unit}
-                          active={active}
-                          onOpen={() => {
-                            onFocusIndicator(o.indicator_id)
-                            setModalId(o.indicator_id)
-                          }}
-                        />
-                      </li>
-                    )
-                  }
+            return (
+              <div
+                key={g.id}
+                className="rounded-xl border border-slate-800/80 bg-slate-950/50 p-2.5"
+              >
+                <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  {g.label}
+                </h3>
+                <div className="flex flex-col gap-2">
+                  {rows.map((row, ri) => (
+                    <div
+                      key={`${g.id}-r${ri}`}
+                      className="flex flex-row flex-nowrap justify-start gap-2"
+                    >
+                      {row.map((o) => {
+                        const ind = indMap.get(o.indicator_id)
+                        const active = focusedId === o.indicator_id
+                        const isNa =
+                          o.data_quality === 'NA' || o.actual == null
+                        const useSpark =
+                          chartGroup && SPARKLINE_PILOT_IDS.has(o.indicator_id)
 
-                  return (
-                    <li key={o.id || o.indicator_id}>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onFocusIndicator(active ? null : o.indicator_id)
+                        if (useSpark) {
+                          return (
+                            <div key={o.id || o.indicator_id} className={slotClass}>
+                              <SparklineCard
+                                indicatorId={o.indicator_id}
+                                name={ind?.name ?? o.indicator_id}
+                                observation={o}
+                                series={series}
+                                unit={o.unit || ind?.unit}
+                                active={active}
+                                onOpen={() => {
+                                  onFocusIndicator(o.indicator_id)
+                                  setModalId(o.indicator_id)
+                                }}
+                              />
+                            </div>
+                          )
                         }
-                        className={`flex w-full items-baseline justify-between gap-2 rounded-lg px-2 py-1.5 text-left transition ${
-                          active
-                            ? 'bg-cyan-500/15 ring-1 ring-cyan-400/40'
-                            : 'hover:bg-slate-800/60'
-                        }`}
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate text-xs text-slate-300">
-                            {ind?.name ?? o.indicator_id}
-                          </span>
-                          {o.reference_period ? (
-                            <span className="text-[10px] text-slate-600">
-                              {o.reference_period}
-                            </span>
-                          ) : null}
-                        </span>
-                        <span
-                          className={`shrink-0 font-mono text-sm tabular-nums ${
-                            isNa ? 'text-slate-500' : 'text-slate-100'
-                          }`}
-                        >
-                          {formatActual(o)}
-                          {!isNa && (o.unit || ind?.unit) ? (
-                            <span className="ml-1 text-[10px] font-sans text-slate-500">
-                              {o.unit || ind?.unit}
-                            </span>
-                          ) : null}
-                        </span>
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          ))}
+
+                        return (
+                          <div key={o.id || o.indicator_id} className={slotClass}>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onFocusIndicator(active ? null : o.indicator_id)
+                              }
+                              className={`flex h-full w-full flex-col items-start justify-between gap-1 rounded-lg border px-2.5 py-2 text-left transition ${
+                                active
+                                  ? 'border-cyan-400/40 bg-cyan-500/15 ring-1 ring-cyan-400/40'
+                                  : 'border-slate-800 bg-slate-900/50 hover:bg-slate-800/60'
+                              }`}
+                            >
+                              <span className="min-w-0 w-full">
+                                <span className="block truncate text-xs text-slate-300">
+                                  {ind?.name ?? o.indicator_id}
+                                </span>
+                                {o.reference_period ? (
+                                  <span className="text-[10px] text-slate-600">
+                                    {o.reference_period}
+                                  </span>
+                                ) : null}
+                              </span>
+                              <span
+                                className={`font-mono text-sm tabular-nums ${
+                                  isNa ? 'text-slate-500' : 'text-slate-100'
+                                }`}
+                              >
+                                {formatActual(o)}
+                                {!isNa && (o.unit || ind?.unit) ? (
+                                  <span className="ml-1 text-[10px] font-sans text-slate-500">
+                                    {o.unit || ind?.unit}
+                                  </span>
+                                ) : null}
+                              </span>
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
