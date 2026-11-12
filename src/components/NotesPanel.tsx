@@ -22,8 +22,12 @@ interface Props {
 const SECTION_ORDER: NoteSection[] = [
   'executive',
   'marginal',
-  'market_structure',
   'observe',
+  'market_structure',
+  'market_narrative',
+  'fupeng',
+  'strategy_1w',
+  'etf_flows',
   'data_gaps',
 ]
 

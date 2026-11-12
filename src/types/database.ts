@@ -5,6 +5,10 @@ export type NoteSection =
   | 'marginal'
   | 'observe'
   | 'market_structure'
+  | 'market_narrative'
+  | 'fupeng'
+  | 'strategy_1w'
+  | 'etf_flows'
   | 'data_gaps'
 
 export type Importance = 'critical' | 'high' | 'normal' | 'low'
@@ -93,6 +97,10 @@ export const SECTION_LABELS: Record<NoteSection, string> = {
   marginal: '重要边际变化',
   observe: '观察项（一句带过）',
   market_structure: '市场结构',
+  market_narrative: '市场叙述',
+  fupeng: '付鹏结构',
+  strategy_1w: '未来1周策略',
+  etf_flows: 'ETF资金流',
   data_gaps: '数据缺口与卡点',
 }
 
@@ -121,6 +129,33 @@ export const SERIES_COLORS: Record<string, string> = {
   // 信用
   hy_oas: '#ec4899', // pink
   ig_oas: '#c026d3', // magenta
+  // ETF 行情（etf_prices close）
+  SPY: '#2563eb',
+  RSP: '#059669',
+  QQQ: '#7c3aed',
+  IWM: '#db2777',
+  XLK: '#0284c7',
+  XLF: '#ca8a04',
+  XLI: '#0f766e',
+  XLE: '#c2410c',
+  XLV: '#be185d',
+  XLP: '#4d7c0f',
+  XLU: '#6366f1',
+  XBI: '#e11d48',
+  HYG: '#b45309',
+  LQD: '#0e7490',
+  TLT: '#9333ea',
+  SGOV: '#65a30d',
+  SCHD: '#0891b2',
+  MTUM: '#f59e0b',
+  QUAL: '#6d28d9',
+  ARKK: '#b91c1c',
+  // ETF 相对强弱（etf_ratio_series，调整后收盘）
+  spy_rsp: '#38bdf8',
+  qqq_spy: '#a3e635',
+  iwm_spy: '#fb7185',
+  xlk_xlf: '#f472b6',
+  hyg_lqd: '#fdba74',
 }
 
 /** Fallback palette when an id has no fixed color — spaced hues for dark bg. */

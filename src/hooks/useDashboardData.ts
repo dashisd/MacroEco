@@ -13,6 +13,7 @@ import type {
 } from '../types/database'
 import { DEFAULT_SERIES_IDS } from '../types/database'
 import { SERIES_PRESETS } from '../lib/categories'
+import { ETF_RATIO_ID_SET, ETF_TICKER_SET, etfRatioIndicators, fetchEtfRatioPoints } from '../lib/etf'
 
 /** Sparkline pilots — always included in series_1y fetch (~5Y closes; cards slice 1Y). */
 export const SPARKLINE_PILOT_IDS = [
@@ -98,10 +99,25 @@ async function fetchOhlcForId(id: string, since: string): Promise<OhlcBar[]> {
   return rows
 }
 
+function hasActual(row: Observation): boolean {
+  return row.data_quality !== 'NA' && row.actual != null
+}
+
+/** Latest as_of. On a tie, keep a row that has a value over an NA snapshot. */
 function dedupeObservations(rows: Observation[]): Observation[] {
   const best = new Map<string, Observation>()
-  for (const o of rows) {
-    if (!best.has(o.indicator_id)) best.set(o.indicator_id, o)
+  for (const row of rows) {
+    const prev = best.get(row.indicator_id)
+    if (!prev) {
+      best.set(row.indicator_id, row)
+      continue
+    }
+    const newerDate = row.as_of > prev.as_of
+    const sameDate = row.as_of === prev.as_of
+    const presentWins = sameDate && hasActual(row) && !hasActual(prev)
+    const higherId =
+      sameDate && hasActual(row) === hasActual(prev) && (row.id ?? 0) > (prev.id ?? 0)
+    if (newerDate || presentWins || higherId) best.set(row.indicator_id, row)
   }
   return [...best.values()]
 }
@@ -124,8 +140,8 @@ export interface DashboardState {
   ohlcLoadingId: string | null
   ensureOhlc: (indicatorId: string) => Promise<void>
   availableSeriesIds: string[]
+  /** Locked to 1w — the macro page only shows 近一周 content. */
   windowLabel: WindowLabel
-  setWindowLabel: (w: WindowLabel) => void
   reportDate: string | null
   setReportDate: (d: string | null) => void
   rangeDays: number
@@ -154,7 +170,8 @@ export function useDashboardData(): DashboardState {
   const [series, setSeries] = useState<SeriesPoint[]>([])
   const [ohlcById, setOhlcById] = useState<Record<string, OhlcBar[]>>({})
   const [ohlcLoadingId, setOhlcLoadingId] = useState<string | null>(null)
-  const [windowLabel, setWindowLabel] = useState<WindowLabel>('1w')
+  // FE locked to 近一周; DB may still retain 2_4w rows — do not delete them.
+  const windowLabel: WindowLabel = '1w'
   const [reportDate, setReportDate] = useState<string | null>(null)
   const [rangeDays, setRangeDays] = useState(365 * 5)
   const [enabledSeries, setEnabledSeries] = useState<string[]>([...DEFAULT_SERIES_IDS])
@@ -177,7 +194,7 @@ export function useDashboardData(): DashboardState {
   )
 
   // ——— Effect A: meta / notes / observations / indicators / events ———
-  // Reloads when reportDate, windowLabel, or tick change. Does NOT touch series/OHLC.
+  // Reloads when reportDate or tick change. Does NOT touch series/OHLC.
   useEffect(() => {
     let cancelled = false
 
@@ -264,9 +281,9 @@ export function useDashboardData(): DashboardState {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tick, reportDate, windowLabel])
+  }, [tick, reportDate])
 
-  // ——— Effect B: series_1y only ———
+  // ——— Effect B: series_1y + client-merged etf_ratio_series ———
   // Reloads when rangeDays / tick / enabled series change — NOT windowLabel.
   useEffect(() => {
     let cancelled = false
@@ -289,11 +306,22 @@ export function useDashboardData(): DashboardState {
             ...enabledSeries,
             ...presetIds,
           ]),
-        ]
+        ].filter((id) => !ETF_RATIO_ID_SET.has(id) && !ETF_TICKER_SET.has(id))
         const seriesRows = await fetchSeriesForIds(neededIds, since)
+        // ETF ratios stay in etf_ratio_series. Merge here so the shared preset
+        // can draw them without writing observations or series_1y.
+        let ratioPoints: SeriesPoint[] = []
+        try {
+          ratioPoints = await fetchEtfRatioPoints(since)
+        } catch (ratioError) {
+          if (!cancelled) {
+            setError(ratioError instanceof Error ? ratioError.message : String(ratioError))
+          }
+        }
         if (cancelled) return
-        setSeries(seriesRows)
-        seriesPresentRef.current = seriesRows.length > 0
+        const merged = [...seriesRows, ...ratioPoints]
+        setSeries(merged)
+        seriesPresentRef.current = merged.length > 0
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : String(e))
@@ -353,25 +381,30 @@ export function useDashboardData(): DashboardState {
   )
 
   const activeMeta = useMemo(() => {
-    if (!metaList.length) return null
-    const byDate = reportDate
-      ? metaList.filter((m) => m.report_date === reportDate)
-      : metaList
-    return (
-      byDate.find((m) => m.window_label === windowLabel) ??
-      byDate[0] ??
-      metaList[0] ??
-      null
-    )
-  }, [metaList, reportDate, windowLabel])
+    const oneWeek = metaList.filter((m) => m.window_label === windowLabel)
+    if (!oneWeek.length) return null
+    if (!reportDate) return oneWeek[0] ?? null
+    return oneWeek.find((m) => m.report_date === reportDate) ?? null
+  }, [metaList, reportDate])
+
+  const indicatorsWithRatios = useMemo(() => {
+    const seen = new Set(indicators.map((i) => i.id))
+    const extra = etfRatioIndicators().filter((i) => !seen.has(i.id))
+    return extra.length ? [...indicators, ...extra] : indicators
+  }, [indicators])
 
   const availableSeriesIds = useMemo(() => {
     const fromData = new Set(series.map((s) => s.indicator_id))
     const defaults = DEFAULT_SERIES_IDS.filter((id) => fromData.has(id))
     const extras = [...fromData].filter(
-      (id) => !defaults.includes(id as (typeof DEFAULT_SERIES_IDS)[number]),
+      (id) =>
+        !defaults.includes(id as (typeof DEFAULT_SERIES_IDS)[number]) &&
+        !ETF_RATIO_ID_SET.has(id),
     )
-    return [...defaults, ...extras.sort()]
+    const ratios = [...ETF_RATIO_ID_SET].filter((id) => fromData.has(id))
+    const ratioOrder = ['spy_rsp', 'qqq_spy', 'iwm_spy', 'xlk_xlf', 'hyg_lqd']
+    ratios.sort((a, b) => ratioOrder.indexOf(a) - ratioOrder.indexOf(b))
+    return [...defaults, ...extras.sort(), ...ratios]
   }, [series])
 
   const toggleSeries = useCallback((id: string) => {
@@ -390,7 +423,7 @@ export function useDashboardData(): DashboardState {
     loading,
     error,
     connected: supabaseConfigured && !error,
-    indicators,
+    indicators: indicatorsWithRatios,
     indicatorCount: indicators.length,
     metaList,
     activeMeta,
@@ -404,7 +437,6 @@ export function useDashboardData(): DashboardState {
     ensureOhlc,
     availableSeriesIds,
     windowLabel,
-    setWindowLabel,
     reportDate: reportDate ?? activeMeta?.report_date ?? null,
     setReportDate,
     rangeDays,
