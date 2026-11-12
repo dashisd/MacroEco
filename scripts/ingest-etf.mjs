@@ -29,9 +29,15 @@ const UNIVERSE = [
   ['XLV', 'Health Care Select Sector SPDR', 'sector', 'SSGA', 90],
   ['XLP', 'Consumer Staples Select Sector SPDR', 'sector', 'SSGA', 100],
   ['XLU', 'Utilities Select Sector SPDR', 'sector', 'SSGA', 110],
+  ['XBI', 'SPDR S&P Biotech ETF', 'sector', 'SSGA', 115],
   ['HYG', 'iShares iBoxx High Yield Corporate', 'credit_rates', 'iShares', 120],
   ['LQD', 'iShares iBoxx Investment Grade Corporate', 'credit_rates', 'iShares', 130],
   ['TLT', 'iShares 20+ Year Treasury Bond', 'credit_rates', 'iShares', 140],
+  ['SGOV', 'iShares 0-3 Month Treasury Bond ETF', 'credit_rates', 'iShares', 145],
+  ['SCHD', 'Schwab US Dividend Equity ETF', 'style_theme', 'Schwab', 160],
+  ['MTUM', 'iShares MSCI USA Momentum Factor ETF', 'style_theme', 'iShares', 170],
+  ['QUAL', 'iShares MSCI USA Quality Factor ETF', 'style_theme', 'iShares', 180],
+  ['ARKK', 'ARK Innovation ETF', 'style_theme', 'ARK', 190],
 ]
 
 const RATIOS = [

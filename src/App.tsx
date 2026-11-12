@@ -8,6 +8,7 @@ import { LatestReadings } from './components/LatestReadings'
 import { EtfBoard } from './components/EtfBoard'
 import { useDashboardData } from './hooks/useDashboardData'
 import { MACRO_TOGGLE_PRESET_IDS } from './lib/categories'
+import { ETF_TICKERS } from './lib/etf'
 import { useEtfData } from './hooks/useEtfData'
 import type { ReportNote } from './types/database'
 
@@ -56,7 +57,7 @@ export default function App() {
         reportDate={d.reportDate}
         indicatorCount={d.indicatorCount}
         etfAsOf={etf.asOf}
-        statusDetail={etfMode ? `${etf.loadedTickers}/14 只 ETF` : null}
+        statusDetail={etfMode ? `${etf.loadedTickers}/${ETF_TICKERS.length} 只 ETF` : null}
         loading={etfMode ? etf.loading : d.loading}
         connected={etfMode ? etf.connected : d.connected}
         error={etfMode ? etf.error : d.error}

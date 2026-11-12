@@ -4,6 +4,7 @@ const ETF_GROUP_PRESET_IDS: Record<EtfGroupId, string> = {
   broad: 'etf_broad',
   sector: 'etf_sector',
   credit_rates: 'etf_credit',
+  style_theme: 'etf_style',
 }
 
 const ETF_GROUP_PRESETS = ETF_GROUP_ORDER.map((group) => ({
@@ -44,12 +45,12 @@ export const SERIES_PRESETS: { id: string; label: string; ids: string[] }[] = [
     label: '市场',
     ids: ['sp500', 'nasdaq', 'dji', 'wti', 'brent', 'gold_comex', 'btc'],
   },
-  ...ETF_GROUP_PRESETS,
   {
     id: 'etf_rs',
     label: 'ETF 相对强弱',
     ids: ['spy_rsp', 'qqq_spy', 'iwm_spy', 'xlk_xlf', 'hyg_lqd'],
   },
+  ...ETF_GROUP_PRESETS,
   {
     id: 'all',
     label: '全部',

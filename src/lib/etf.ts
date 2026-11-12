@@ -1,7 +1,7 @@
 import { supabase, supabaseConfigured } from './supabase'
 import type { Indicator, OhlcBar, Observation, SeriesPoint } from '../types/database'
 
-export type EtfGroupId = 'broad' | 'sector' | 'credit_rates'
+export type EtfGroupId = 'broad' | 'sector' | 'credit_rates' | 'style_theme'
 
 export interface EtfCatalogEntry {
   ticker: string
@@ -31,15 +31,22 @@ export const ETF_CATALOG: EtfCatalogEntry[] = [
   { ticker: 'XLV', name: 'Health Care Select Sector SPDR', group_id: 'sector', issuer: 'SSGA', sort_order: 90 },
   { ticker: 'XLP', name: 'Consumer Staples Select Sector SPDR', group_id: 'sector', issuer: 'SSGA', sort_order: 100 },
   { ticker: 'XLU', name: 'Utilities Select Sector SPDR', group_id: 'sector', issuer: 'SSGA', sort_order: 110 },
+  { ticker: 'XBI', name: 'SPDR S&P Biotech ETF', group_id: 'sector', issuer: 'SSGA', sort_order: 115 },
   { ticker: 'HYG', name: 'iShares iBoxx High Yield Corporate', group_id: 'credit_rates', issuer: 'iShares', sort_order: 120 },
   { ticker: 'LQD', name: 'iShares iBoxx Investment Grade Corporate', group_id: 'credit_rates', issuer: 'iShares', sort_order: 130 },
   { ticker: 'TLT', name: 'iShares 20+ Year Treasury Bond', group_id: 'credit_rates', issuer: 'iShares', sort_order: 140 },
+  { ticker: 'SGOV', name: 'iShares 0-3 Month Treasury Bond ETF', group_id: 'credit_rates', issuer: 'iShares', sort_order: 145 },
+  { ticker: 'SCHD', name: 'Schwab US Dividend Equity ETF', group_id: 'style_theme', issuer: 'Schwab', sort_order: 160 },
+  { ticker: 'MTUM', name: 'iShares MSCI USA Momentum Factor ETF', group_id: 'style_theme', issuer: 'iShares', sort_order: 170 },
+  { ticker: 'QUAL', name: 'iShares MSCI USA Quality Factor ETF', group_id: 'style_theme', issuer: 'iShares', sort_order: 180 },
+  { ticker: 'ARKK', name: 'ARK Innovation ETF', group_id: 'style_theme', issuer: 'ARK', sort_order: 190 },
 ]
 
 export const ETF_GROUP_ORDER: { id: EtfGroupId; label: string }[] = [
   { id: 'broad', label: '宽基' },
   { id: 'sector', label: '行业' },
   { id: 'credit_rates', label: '信用·利率' },
+  { id: 'style_theme', label: '风格·主题' },
 ]
 
 /** Total-return ratios. Never substitute sp500 / nasdaq index series for SPY / QQQ. */
@@ -62,7 +69,13 @@ export const ETF_TICKER_SET = new Set(ETF_TICKERS)
 export const ETF_PRESET_ID = 'etf_rs'
 
 /** ETF page 序列开关. Macro keeps its own list and does not show these price groups. */
-export const ETF_PAGE_PRESET_IDS = ['etf_broad', 'etf_sector', 'etf_credit', 'etf_rs']
+export const ETF_PAGE_PRESET_IDS = [
+  'etf_rs',
+  'etf_broad',
+  'etf_sector',
+  'etf_credit',
+  'etf_style',
+]
 
 const PAGE = 1000
 
@@ -133,7 +146,12 @@ interface RatioPayload {
 }
 
 function isGroupId(value: string): value is EtfGroupId {
-  return value === 'broad' || value === 'sector' || value === 'credit_rates'
+  return (
+    value === 'broad' ||
+    value === 'sector' ||
+    value === 'credit_rates' ||
+    value === 'style_theme'
+  )
 }
 
 /** Catalog order, with live etf_universe names when the row exists. */
