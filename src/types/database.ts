@@ -87,9 +87,12 @@ export interface ReportMeta {
   source_agent: string | null
 }
 
+/** Home chart defaults: the same four series as the 市场追踪 KPI row. */
 export const DEFAULT_SERIES_IDS = [
   'sp500',
   'nasdaq',
+  'dji',
+  't10y2y',
 ] as const
 
 export const SECTION_LABELS: Record<NoteSection, string> = {

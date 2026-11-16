@@ -17,6 +17,8 @@ interface Props {
   loading: boolean
   onSelectNote: (note: ReportNote) => void
   onClear: () => void
+  /** `aside` sits beside the chart. `stack` is a full-width page section. */
+  layout?: 'aside' | 'stack'
 }
 
 const SECTION_ORDER: NoteSection[] = [
@@ -40,7 +42,9 @@ export function NotesPanel({
   loading,
   onSelectNote,
   onClear,
+  layout = 'aside',
 }: Props) {
+  const stacked = layout === 'stack'
   const nameOf = (id: string | null) => {
     if (!id) return null
     return indicators.find((i) => i.id === id)?.name ?? id
@@ -70,7 +74,11 @@ export function NotesPanel({
   }
 
   return (
-    <aside className="flex w-full flex-col rounded-2xl border border-slate-800 bg-slate-900/50 lg:w-[380px] xl:w-[420px]">
+    <aside
+      className={`flex w-full flex-col rounded-2xl border border-slate-800 bg-slate-900/50 ${
+        stacked ? '' : 'lg:w-[380px] xl:w-[420px]'
+      }`}
+    >
       <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
         <h2 className="text-sm font-medium text-slate-200">报告解释</h2>
         {(selectedNoteId || focusedIndicatorId) && (
@@ -84,10 +92,7 @@ export function NotesPanel({
         )}
       </div>
 
-      <div
-        className="flex-1 space-y-4 overflow-y-auto p-3 sm:p-4"
-        style={{ maxHeight: 640 }}
-      >
+      <div className="flex-1 space-y-4 overflow-y-auto p-3 sm:p-4" style={{ maxHeight: 640 }}>
         {loading ? (
           <p className="text-sm text-slate-400">解释加载中…</p>
         ) : notes.length === 0 ? (

@@ -68,7 +68,7 @@ export const ETF_TICKER_SET = new Set(ETF_TICKERS)
 
 export const ETF_PRESET_ID = 'etf_rs'
 
-/** ETF page 序列开关. Macro keeps its own list and does not show these price groups. */
+/** Price-group presets. Home 市场数据 shows these as sparkline cards, not chart defaults. */
 export const ETF_PAGE_PRESET_IDS = [
   'etf_rs',
   'etf_broad',

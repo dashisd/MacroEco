@@ -19,6 +19,10 @@ interface Props {
   loading?: boolean
   focusedId: string | null
   onFocusIndicator: (id: string | null) => void
+  /** When set, only these reading groups are rendered. Leftovers still fall into 其他. */
+  includeGroupIds?: readonly string[]
+  /** Ids that belong on another page. Dropped from every group, including 其他. */
+  excludeIndicatorIds?: readonly string[]
 }
 
 function formatActual(obs: Observation): string {
@@ -78,6 +82,8 @@ export function LatestReadings({
   loading,
   focusedId,
   onFocusIndicator,
+  includeGroupIds,
+  excludeIndicatorIds,
 }: Props) {
   const [modalId, setModalId] = useState<string | null>(null)
 
@@ -92,12 +98,17 @@ export function LatestReadings({
     return m
   }, [indicators])
 
+  const includeKey = includeGroupIds?.join(',') ?? ''
+  const excludeKey = excludeIndicatorIds?.join(',') ?? ''
+
   const visible = useMemo(() => {
+    const excluded = new Set(excludeKey ? excludeKey.split(',') : [])
     const filtered = observations.filter(
       (o) =>
         o.data_quality !== 'NA' &&
         o.actual != null &&
-        !HIDDEN_READING_IDS.has(o.indicator_id),
+        !HIDDEN_READING_IDS.has(o.indicator_id) &&
+        !excluded.has(o.indicator_id),
     )
     const best = new Map<string, Observation>()
     for (const o of filtered) {
@@ -111,13 +122,15 @@ export function LatestReadings({
       if (newer) best.set(o.indicator_id, o)
     }
     return [...best.values()]
-  }, [observations])
+  }, [observations, excludeKey])
 
   const grouped = useMemo(() => {
     const assigned = new Set<string>()
     const groups: { id: string; label: string; items: Observation[] }[] = []
+    const allowed = includeKey ? new Set(includeKey.split(',')) : null
 
     for (const g of READING_GROUPS) {
+      if (allowed && !allowed.has(g.id)) continue
       const items = visible.filter((o) => {
         if (assigned.has(o.indicator_id)) return false
         const cat = indMap.get(o.indicator_id)?.category ?? null
@@ -137,7 +150,7 @@ export function LatestReadings({
     if (other.length) groups.push({ id: 'other', label: '其他', items: other })
 
     return groups
-  }, [visible, indMap])
+  }, [visible, indMap, includeKey])
 
   const modalInd = modalId ? indMap.get(modalId) : null
   const modalObs = modalId
@@ -162,7 +175,9 @@ export function LatestReadings({
         <p className="text-sm text-slate-400">读数加载中…</p>
       ) : visible.length === 0 ? (
         <p className="text-sm text-slate-500">
-          该报告日暂无 observations。日更写入后按国债 / 市场 / 波动等分类展示。
+          {includeGroupIds
+            ? '该报告日暂无这些宏观读数。'
+            : '该报告日暂无 observations。日更写入后按国债 / 市场 / 波动等分类展示。'}
         </p>
       ) : (
         <div className="flex flex-col gap-2.5">
