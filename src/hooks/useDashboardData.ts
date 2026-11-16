@@ -13,7 +13,7 @@ import type {
 } from '../types/database'
 import { DEFAULT_SERIES_IDS } from '../types/database'
 import { SERIES_PRESETS } from '../lib/categories'
-import { ETF_RATIO_ID_SET, ETF_TICKER_SET, etfRatioIndicators, fetchEtfRatioPoints } from '../lib/etf'
+import { ETF_TICKER_SET } from '../lib/etf'
 
 /** Sparkline pilots — always included in series_1y fetch (~5Y closes; cards slice 1Y). */
 export const SPARKLINE_PILOT_IDS = [
@@ -173,7 +173,7 @@ export function useDashboardData(): DashboardState {
   // FE locked to 近一周; DB may still retain 2_4w rows — do not delete them.
   const windowLabel: WindowLabel = '1w'
   const [reportDate, setReportDate] = useState<string | null>(null)
-  const [rangeDays, setRangeDays] = useState(365 * 5)
+  const [rangeDays, setRangeDays] = useState(365)
   const [enabledSeries, setEnabledSeries] = useState<string[]>([...DEFAULT_SERIES_IDS])
   const [activePresetId, setActivePresetId] = useState<string | null>(null)
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
@@ -283,7 +283,8 @@ export function useDashboardData(): DashboardState {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tick, reportDate])
 
-  // ——— Effect B: series_1y + client-merged etf_ratio_series ———
+  // ——— Effect B: series_1y ———
+  // ETF prices are merged on the market page from etf_prices. Ratio pairs are not loaded.
   // Reloads when rangeDays / tick / enabled series change — NOT windowLabel.
   useEffect(() => {
     let cancelled = false
@@ -306,22 +307,11 @@ export function useDashboardData(): DashboardState {
             ...enabledSeries,
             ...presetIds,
           ]),
-        ].filter((id) => !ETF_RATIO_ID_SET.has(id) && !ETF_TICKER_SET.has(id))
+        ].filter((id) => !ETF_TICKER_SET.has(id))
         const seriesRows = await fetchSeriesForIds(neededIds, since)
-        // ETF ratios stay in etf_ratio_series. Merge here so the shared preset
-        // can draw them without writing observations or series_1y.
-        let ratioPoints: SeriesPoint[] = []
-        try {
-          ratioPoints = await fetchEtfRatioPoints(since)
-        } catch (ratioError) {
-          if (!cancelled) {
-            setError(ratioError instanceof Error ? ratioError.message : String(ratioError))
-          }
-        }
         if (cancelled) return
-        const merged = [...seriesRows, ...ratioPoints]
-        setSeries(merged)
-        seriesPresentRef.current = merged.length > 0
+        setSeries(seriesRows)
+        seriesPresentRef.current = seriesRows.length > 0
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : String(e))
@@ -387,24 +377,15 @@ export function useDashboardData(): DashboardState {
     return oneWeek.find((m) => m.report_date === reportDate) ?? null
   }, [metaList, reportDate])
 
-  const indicatorsWithRatios = useMemo(() => {
-    const seen = new Set(indicators.map((i) => i.id))
-    const extra = etfRatioIndicators().filter((i) => !seen.has(i.id))
-    return extra.length ? [...indicators, ...extra] : indicators
-  }, [indicators])
-
   const availableSeriesIds = useMemo(() => {
     const fromData = new Set(series.map((s) => s.indicator_id))
     const defaults = DEFAULT_SERIES_IDS.filter((id) => fromData.has(id))
     const extras = [...fromData].filter(
       (id) =>
         !defaults.includes(id as (typeof DEFAULT_SERIES_IDS)[number]) &&
-        !ETF_RATIO_ID_SET.has(id),
+        !ETF_TICKER_SET.has(id),
     )
-    const ratios = [...ETF_RATIO_ID_SET].filter((id) => fromData.has(id))
-    const ratioOrder = ['spy_rsp', 'qqq_spy', 'iwm_spy', 'xlk_xlf', 'hyg_lqd']
-    ratios.sort((a, b) => ratioOrder.indexOf(a) - ratioOrder.indexOf(b))
-    return [...defaults, ...extras.sort(), ...ratios]
+    return [...defaults, ...extras.sort()]
   }, [series])
 
   const toggleSeries = useCallback((id: string) => {
@@ -423,7 +404,7 @@ export function useDashboardData(): DashboardState {
     loading,
     error,
     connected: supabaseConfigured && !error,
-    indicators: indicatorsWithRatios,
+    indicators,
     indicatorCount: indicators.length,
     metaList,
     activeMeta,

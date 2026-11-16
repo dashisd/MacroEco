@@ -259,8 +259,8 @@ export function SeriesChart({
   indicators,
   focusedId,
   loading,
-  asideHint = '点击图例可联动右侧解释',
-  emptyHint = '`series_1y` 尚为空。日更写入后，默认展示 S&P 500 与 NASDAQ。当前已通过只读密钥连上 Supabase。',
+  asideHint = '点击图例聚焦一条序列',
+  emptyHint = '`series_1y` 尚为空。日更写入后，默认展示 S&P 500、NASDAQ、道琼斯与 10Y–2Y。当前已通过只读密钥连上 Supabase。',
   onSeriesFocus,
 }: Props) {
   const nameOf = (id: string) =>

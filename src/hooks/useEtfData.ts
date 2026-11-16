@@ -3,13 +3,9 @@ import { daysAgoIso } from '../lib/format'
 import { supabaseConfigured } from '../lib/supabase'
 import {
   ETF_GROUP_ORDER,
-  ETF_PRESET_ID,
-  ETF_RATIO_IDS,
   ETF_TICKERS,
   etfPriceIndicators,
-  etfRatioIndicators,
   fetchEtfPrices,
-  fetchEtfRatioPoints,
   fetchEtfUniverse,
   latestObservation,
   mergeUniverse,
@@ -19,7 +15,7 @@ import {
   type EtfPriceBar,
   type EtfUniverseRow,
 } from '../lib/etf'
-import type { Indicator, OhlcBar, Observation, SeriesPoint } from '../types/database'
+import type { Indicator, OhlcBar, Observation } from '../types/database'
 
 export interface EtfCardModel {
   ticker: string
@@ -40,15 +36,12 @@ const PRICE_LOOKBACK_DAYS = 365 * 5 + 40
 export function useEtfData(active: boolean) {
   const [loading, setLoading] = useState(false)
   const [priceError, setPriceError] = useState<string | null>(null)
-  const [ratioError, setRatioError] = useState<string | null>(null)
-  const [ratioLoading, setRatioLoading] = useState(false)
   const [ready, setReady] = useState(false)
   const [universe, setUniverse] = useState<EtfUniverseRow[]>([])
   const [prices, setPrices] = useState<EtfPriceBar[]>([])
-  const [ratioSeries, setRatioSeries] = useState<SeriesPoint[]>([])
   const [rangeDays, setRangeDays] = useState(365 * 5)
-  const [enabledSeries, setEnabledSeries] = useState<string[]>([...ETF_RATIO_IDS])
-  const [activePresetId, setActivePresetId] = useState<string | null>(ETF_PRESET_ID)
+  const [enabledSeries, setEnabledSeries] = useState<string[]>([])
+  const [activePresetId, setActivePresetId] = useState<string | null>(null)
   const [focusedId, setFocusedId] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
 
@@ -92,30 +85,6 @@ export function useEtfData(active: boolean) {
     }
   }, [active, tick])
 
-  useEffect(() => {
-    if (!active) return
-    let cancelled = false
-
-    async function loadRatios() {
-      if (!supabaseConfigured) return
-      setRatioLoading(true)
-      setRatioError(null)
-      try {
-        const points = await fetchEtfRatioPoints(daysAgoIso(rangeDays))
-        if (!cancelled) setRatioSeries(points)
-      } catch (err) {
-        if (!cancelled) setRatioError(err instanceof Error ? err.message : String(err))
-      } finally {
-        if (!cancelled) setRatioLoading(false)
-      }
-    }
-
-    void loadRatios()
-    return () => {
-      cancelled = true
-    }
-  }, [active, tick, rangeDays])
-
   const closeSeries = useMemo(() => pricesToSeries(prices), [prices])
   const ohlc = useMemo(() => pricesToOhlc(prices), [prices])
 
@@ -142,18 +111,14 @@ export function useEtfData(active: boolean) {
     }))
   }, [universe, prices, ohlc])
 
-  const indicators = useMemo<Indicator[]>(
-    () => [...etfPriceIndicators(), ...etfRatioIndicators()],
-    [],
-  )
+  const indicators = useMemo<Indicator[]>(() => etfPriceIndicators(), [])
 
-  const availableSeriesIds = [...ETF_TICKERS, ...ETF_RATIO_IDS]
+  const availableSeriesIds = [...ETF_TICKERS]
 
   const chartSeries = useMemo(() => {
     const since = daysAgoIso(rangeDays)
-    const closes = closeSeries.filter((point) => point.date >= since)
-    return [...closes, ...ratioSeries]
-  }, [closeSeries, ratioSeries, rangeDays])
+    return closeSeries.filter((point) => point.date >= since)
+  }, [closeSeries, rangeDays])
 
   const asOf = useMemo(() => {
     let latest = ''
@@ -187,12 +152,10 @@ export function useEtfData(active: boolean) {
 
   return {
     loading: active && (!ready || loading),
-    ratioLoading,
-    error: priceError ?? ratioError,
-    connected: supabaseConfigured && !(priceError ?? ratioError),
+    error: priceError,
+    connected: supabaseConfigured && !priceError,
     groups,
     closeSeries,
-    ratioSeries,
     chartSeries,
     indicators,
     availableSeriesIds,

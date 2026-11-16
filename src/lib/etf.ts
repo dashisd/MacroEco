@@ -66,11 +66,35 @@ export const ETF_TICKERS = ETF_CATALOG.map((entry) => entry.ticker)
 
 export const ETF_TICKER_SET = new Set(ETF_TICKERS)
 
-export const ETF_PRESET_ID = 'etf_rs'
+/**
+ * 市场追踪 series-toggle order. Every catalog ticker once, as a price series.
+ * Not the SPY/RSP-style ratio pairs.
+ */
+export const ETF_TOGGLE_ORDER = [
+  'SPY',
+  'RSP',
+  'QQQ',
+  'IWM',
+  'XLK',
+  'XLF',
+  'XLI',
+  'XLE',
+  'XLV',
+  'XLP',
+  'XLU',
+  'HYG',
+  'LQD',
+  'TLT',
+  'SCHD',
+  'MTUM',
+  'XBI',
+  'QUAL',
+  'ARKK',
+  'SGOV',
+] as const
 
-/** ETF page 序列开关. Macro keeps its own list and does not show these price groups. */
+/** Price-group presets select these single tickers. They are not chart defaults. */
 export const ETF_PAGE_PRESET_IDS = [
-  'etf_rs',
   'etf_broad',
   'etf_sector',
   'etf_credit',

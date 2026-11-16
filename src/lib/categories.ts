@@ -45,11 +45,6 @@ export const SERIES_PRESETS: { id: string; label: string; ids: string[] }[] = [
     label: '市场',
     ids: ['sp500', 'nasdaq', 'dji', 'wti', 'brent', 'gold_comex', 'btc'],
   },
-  {
-    id: 'etf_rs',
-    label: 'ETF 相对强弱',
-    ids: ['spy_rsp', 'qqq_spy', 'iwm_spy', 'xlk_xlf', 'hyg_lqd'],
-  },
   ...ETF_GROUP_PRESETS,
   {
     id: 'all',
@@ -58,7 +53,10 @@ export const SERIES_PRESETS: { id: string; label: string; ids: string[] }[] = [
   },
 ]
 
-/** Macro 同框 categories. ETF price groups stay on the ETF page. */
+/**
+ * Home-chart categories. ETF group buttons select single-ticker prices.
+ * Ratio pairs are not a preset on this row.
+ */
 export const MACRO_TOGGLE_PRESET_IDS = [
   'rates',
   'bei',
@@ -66,7 +64,10 @@ export const MACRO_TOGGLE_PRESET_IDS = [
   'vol',
   'credit',
   'market',
-  'etf_rs',
+  'etf_broad',
+  'etf_sector',
+  'etf_credit',
+  'etf_style',
   'all',
 ]
 
@@ -177,9 +178,34 @@ export const READING_GROUPS: {
     match: (id, cat) =>
       ['hy_oas', 'ig_oas', 'cds_meta_5y', 'cds_googl_5y', 'cds_nvda_5y', 'cds_crwv_5y'].includes(
         id,
-      ) || cat === 'credit',
+      ) ||       cat === 'credit',
   },
 ]
+
+/**
+ * Macro indicator ids rendered on 市场追踪 (KPI row, 国债 tab, 市场 tab).
+ * 宏观数据 excludes these so rates / indices / vol are not shown twice.
+ * dfii10, acmtp10, and other unmatched macro ids stay available as 其他.
+ */
+export const MARKET_PAGE_MACRO_IDS = [
+  'sp500',
+  'nasdaq',
+  'dji',
+  't10y2y',
+  'dgs2',
+  'dgs10',
+  'dgs30',
+  'wti',
+  'brent',
+  'gold_comex',
+  'btc',
+  'vix',
+  'vixeq',
+  'vixeq_vix_ratio',
+] as const
+
+/** Latest-readings groups that remain on 宏观数据. */
+export const MACRO_PAGE_GROUP_IDS = ['inflation', 'labor', 'fed', 'credit'] as const
 
 /** Parse leading 【类别】 tag from note text. */
 export function parseCategoryTag(text: string): { tag: string | null; body: string } {
