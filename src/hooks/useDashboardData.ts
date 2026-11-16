@@ -173,7 +173,7 @@ export function useDashboardData(): DashboardState {
   // FE locked to 近一周; DB may still retain 2_4w rows — do not delete them.
   const windowLabel: WindowLabel = '1w'
   const [reportDate, setReportDate] = useState<string | null>(null)
-  const [rangeDays, setRangeDays] = useState(365 * 5)
+  const [rangeDays, setRangeDays] = useState(365)
   const [enabledSeries, setEnabledSeries] = useState<string[]>([...DEFAULT_SERIES_IDS])
   const [activePresetId, setActivePresetId] = useState<string | null>(null)
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
