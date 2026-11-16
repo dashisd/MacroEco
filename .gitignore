@@ -27,3 +27,5 @@ dist-ssr
 .env.*
 !.env.example
 .env.local
+supabase/functions/.env
+supabase/.temp

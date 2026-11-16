@@ -1,0 +1,7 @@
+# Local CLI project id. This is not the hosted project ref.
+# verify_jwt is off because pg_cron calls this function with the secret key
+# on the apikey header. The function still requires auth = "secret".
+project_id = "macroeco"
+
+[functions.fred-board-ingest]
+verify_jwt = false
