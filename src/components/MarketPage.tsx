@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import type { DashboardState } from '../hooks/useDashboardData'
 import type { useEtfData } from '../hooks/useEtfData'
 import { MACRO_TOGGLE_PRESET_IDS } from '../lib/categories'
+import { daysAgoIso } from '../lib/format'
+import { ETF_RATIO_ID_SET, ETF_TOGGLE_ORDER, etfPriceIndicators } from '../lib/etf'
 import { SeriesChart } from './SeriesChart'
 import { SeriesDetailModal } from './SeriesDetailModal'
 import { SeriesToggles } from './SeriesToggles'
@@ -49,6 +51,26 @@ export function MarketPage({ d, etf, onFocusIndicator }: Props) {
     const map = new Map(d.indicators.map((i) => [i.id, i]))
     return map
   }, [d.indicators])
+
+  const chartIndicators = useMemo(() => {
+    const seen = new Set(d.indicators.map((i) => i.id))
+    const prices = etfPriceIndicators().filter((i) => !seen.has(i.id))
+    return prices.length ? [...d.indicators, ...prices] : d.indicators
+  }, [d.indicators])
+
+  const chartSeries = useMemo(() => {
+    const since = daysAgoIso(d.rangeDays)
+    const macro = d.series.filter((point) => !ETF_RATIO_ID_SET.has(point.indicator_id))
+    const prices = etf.closeSeries.filter((point) => point.date >= since)
+    return [...macro, ...prices]
+  }, [d.series, d.rangeDays, etf.closeSeries])
+
+  const toggleIds = useMemo(() => {
+    const macro = d.availableSeriesIds.filter(
+      (id) => !ETF_RATIO_ID_SET.has(id) && !ETF_TOGGLE_ORDER.includes(id as (typeof ETF_TOGGLE_ORDER)[number]),
+    )
+    return [...macro, ...ETF_TOGGLE_ORDER]
+  }, [d.availableSeriesIds])
 
   const kpiItems = KPI_IDS.flatMap((id) => {
     const observation = visibleObs.get(id)
@@ -118,9 +140,9 @@ export function MarketPage({ d, etf, onFocusIndicator }: Props) {
       </section>
 
       <SeriesToggles
-        availableIds={d.availableSeriesIds}
+        availableIds={toggleIds}
         enabledIds={d.enabledSeries}
-        indicators={d.indicators}
+        indicators={chartIndicators}
         rangeDays={d.rangeDays}
         focusedId={d.focusedIndicatorId}
         activePresetId={d.activePresetId}
@@ -132,9 +154,9 @@ export function MarketPage({ d, etf, onFocusIndicator }: Props) {
       />
 
       <SeriesChart
-        series={d.series}
+        series={chartSeries}
         enabledIds={d.enabledSeries}
-        indicators={d.indicators}
+        indicators={chartIndicators}
         focusedId={d.focusedIndicatorId}
         loading={d.loading}
         onSeriesFocus={(id) => {

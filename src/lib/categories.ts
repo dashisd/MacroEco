@@ -45,11 +45,6 @@ export const SERIES_PRESETS: { id: string; label: string; ids: string[] }[] = [
     label: '市场',
     ids: ['sp500', 'nasdaq', 'dji', 'wti', 'brent', 'gold_comex', 'btc'],
   },
-  {
-    id: 'etf_rs',
-    label: 'ETF 相对强弱',
-    ids: ['spy_rsp', 'qqq_spy', 'iwm_spy', 'xlk_xlf', 'hyg_lqd'],
-  },
   ...ETF_GROUP_PRESETS,
   {
     id: 'all',
@@ -59,8 +54,8 @@ export const SERIES_PRESETS: { id: string; label: string; ids: string[] }[] = [
 ]
 
 /**
- * Home-chart categories. ETF prices are sparkline cards under 市场数据;
- * the relative-strength preset stays available on that chart.
+ * Home-chart categories. ETF group buttons select single-ticker prices.
+ * Ratio pairs are not a preset on this row.
  */
 export const MACRO_TOGGLE_PRESET_IDS = [
   'rates',
@@ -69,7 +64,10 @@ export const MACRO_TOGGLE_PRESET_IDS = [
   'vol',
   'credit',
   'market',
-  'etf_rs',
+  'etf_broad',
+  'etf_sector',
+  'etf_credit',
+  'etf_style',
   'all',
 ]
 
