@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
 import type { Indicator, SeriesPoint } from '../types/database'
-import { SERIES_COLORS, SERIES_COLOR_FALLBACK } from '../types/database'
+import { SERIES_COLORS, SERIES_COLOR_FALLBACK, seriesDisplayName } from '../types/database'
 
 interface Props {
   series: SeriesPoint[]
@@ -264,7 +264,7 @@ export function SeriesChart({
   onSeriesFocus,
 }: Props) {
   const nameOf = (id: string) =>
-    indicators.find((i) => i.id === id)?.name ?? id.toUpperCase()
+    seriesDisplayName(id, indicators.find((i) => i.id === id)?.name)
   const unitOf = (id: string) => indicators.find((i) => i.id === id)?.unit ?? null
 
   const option = useMemo<EChartsOption>(() => {

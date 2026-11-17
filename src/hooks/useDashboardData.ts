@@ -11,7 +11,7 @@ import type {
   OhlcBar,
   WindowLabel,
 } from '../types/database'
-import { DEFAULT_SERIES_IDS } from '../types/database'
+import { DEFAULT_SERIES_IDS, EMERGING_MARKET_IDS } from '../types/database'
 import { SERIES_PRESETS } from '../lib/categories'
 import { ETF_TICKER_SET } from '../lib/etf'
 
@@ -31,6 +31,7 @@ export const SPARKLINE_PILOT_IDS = [
   'brent',
   'gold_comex',
   'btc',
+  ...EMERGING_MARKET_IDS,
 ] as const
 
 /** OHLC lazy-fetch targets (rates + vix). */

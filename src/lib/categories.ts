@@ -1,3 +1,4 @@
+import { EMERGING_MARKET_IDS } from '../types/database'
 import { ETF_CATALOG, ETF_GROUP_ORDER, type EtfGroupId } from './etf'
 
 const ETF_GROUP_PRESET_IDS: Record<EtfGroupId, string> = {
@@ -183,9 +184,10 @@ export const READING_GROUPS: {
 ]
 
 /**
- * Macro indicator ids rendered on 市场追踪 (KPI row, 国债 tab, 市场 tab).
+ * Macro indicator ids rendered on 市场追踪 (大盘, 国债, 市场, 新兴市场).
  * 宏观数据 excludes these so rates / indices / vol are not shown twice.
  * dfii10, acmtp10, and other unmatched macro ids stay available as 其他.
+ * Emerging-market ids are catalog-only until a later ingest writes them.
  */
 export const MARKET_PAGE_MACRO_IDS = [
   'sp500',
@@ -202,6 +204,7 @@ export const MARKET_PAGE_MACRO_IDS = [
   'vix',
   'vixeq',
   'vixeq_vix_ratio',
+  ...EMERGING_MARKET_IDS,
 ] as const
 
 /** Latest-readings groups that remain on 宏观数据. */

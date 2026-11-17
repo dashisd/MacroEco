@@ -1,6 +1,11 @@
 import { useState, type ReactNode } from 'react'
 import type { useEtfData } from '../hooks/useEtfData'
 import type { Indicator, Observation, SeriesPoint } from '../types/database'
+import {
+  DEFAULT_SERIES_IDS,
+  EMERGING_MARKET_IDS,
+  seriesDisplayName,
+} from '../types/database'
 import { SparklineCard } from './SparklineCard'
 import { SparklineSlots } from './SparklineSlots'
 
@@ -10,7 +15,15 @@ type MacroSlot = { kind: 'macro'; id: string }
 type EtfSlot = { kind: 'etf'; ticker: string }
 type Slot = MacroSlot | EtfSlot
 
+/** Slots that stay on screen as NA cards when the database has no print yet. */
+const EMPTY_WHEN_MISSING = new Set<string>([...DEFAULT_SERIES_IDS, ...EMERGING_MARKET_IDS])
+
 const TABS: { id: string; label: string; slots: Slot[] }[] = [
+  {
+    id: 'benchmarks',
+    label: '大盘',
+    slots: DEFAULT_SERIES_IDS.map((id) => ({ kind: 'macro', id })),
+  },
   {
     id: 'treasuries',
     label: '国债',
@@ -48,6 +61,12 @@ const TABS: { id: string; label: string; slots: Slot[] }[] = [
     ],
   },
   {
+    id: 'emerging',
+    label: '新兴市场',
+    // Pair order, two pairs per row: JPY/日经, EUR/斯托克, HKD/恒生, CNY/沪深300.
+    slots: EMERGING_MARKET_IDS.map((id) => ({ kind: 'macro', id })),
+  },
+  {
     id: 'sector',
     label: '行业 ETF',
     slots: ['XLK', 'XLF', 'XLI', 'XLE', 'XLV', 'XLP', 'XLU', 'XBI'].map((ticker) => ({
@@ -76,6 +95,7 @@ interface Props {
   focusedId: string | null
   etf: EtfState
   activeId: string | null
+  loading?: boolean
   onOpenMacro: (id: string) => void
   onOpenEtf: (ticker: string) => void
 }
@@ -87,6 +107,7 @@ export function MarketDataSection({
   focusedId,
   etf,
   activeId,
+  loading = false,
   onOpenMacro,
   onOpenEtf,
 }: Props) {
@@ -105,14 +126,32 @@ export function MarketDataSection({
   for (const slot of tab.slots) {
     if (slot.kind === 'macro') {
       const observation = obsById.get(slot.id)
-      if (!hasPrint(observation)) continue
       const ind = indById.get(slot.id)
+      const name = seriesDisplayName(slot.id, ind?.name)
+      if (!hasPrint(observation)) {
+        // 大盘 waits for the first payload instead of flashing four NA cards.
+        if (!EMPTY_WHEN_MISSING.has(slot.id) || (tab.id === 'benchmarks' && loading)) continue
+        items.push({
+          key: slot.id,
+          node: (
+            <SparklineCard
+              indicatorId={slot.id}
+              name={name}
+              observation={null}
+              series={series}
+              active={focusedId === slot.id || activeId === slot.id}
+              onOpen={() => onOpenMacro(slot.id)}
+            />
+          ),
+        })
+        continue
+      }
       items.push({
         key: slot.id,
         node: (
           <SparklineCard
             indicatorId={slot.id}
-            name={ind?.name ?? slot.id}
+            name={name}
             observation={observation}
             series={series}
             unit={observation.unit || ind?.unit}
@@ -142,6 +181,7 @@ export function MarketDataSection({
     })
   }
 
+  const benchmarksPending = loading && tab.id === 'benchmarks' && items.length === 0
   const waitingForEtf = etfLoading && tab.slots.some((slot) => slot.kind === 'etf')
 
   return (
@@ -184,8 +224,10 @@ export function MarketDataSection({
         id={`market-panel-${tab.id}`}
         aria-labelledby={`market-tab-${tab.id}`}
       >
-        {waitingForEtf && items.length === 0 ? (
-          <p className="text-sm text-slate-400">行情加载中…</p>
+        {benchmarksPending || (waitingForEtf && items.length === 0) ? (
+          <p className="text-sm text-slate-400">
+            {benchmarksPending ? '读数加载中…' : '行情加载中…'}
+          </p>
         ) : items.length === 0 ? (
           <p className="text-sm text-slate-500">该分组暂无读数。</p>
         ) : (

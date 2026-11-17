@@ -6,7 +6,8 @@ import type { Observation, SeriesPoint } from '../types/database'
 interface Props {
   indicatorId: string
   name: string
-  observation: Observation
+  /** Null when the catalog slot has no observation yet. Renders NA, not a placeholder print. */
+  observation: Observation | null
   series: SeriesPoint[]
   unit?: string | null
   onOpen: () => void
@@ -45,7 +46,8 @@ export function SparklineCard({
 
   const first = points[0]?.value ?? null
   const last =
-    observation.actual ?? points[points.length - 1]?.value ?? null
+    observation?.actual ?? points[points.length - 1]?.value ?? null
+  const noPrint = last == null
   const changePct =
     first != null && last != null && first !== 0
       ? ((last - first) / Math.abs(first)) * 100
@@ -137,11 +139,13 @@ export function SparklineCard({
 
       <div className="flex items-baseline justify-between gap-2">
         <div className="font-mono text-base tabular-nums text-slate-50">
-          {formatValue(last)}
-          {unit ? <span className="ml-1 font-sans text-[10px] text-slate-500">{unit}</span> : null}
+          {noPrint ? 'NA' : formatValue(last)}
+          {!noPrint && unit ? (
+            <span className="ml-1 font-sans text-[10px] text-slate-500">{unit}</span>
+          ) : null}
         </div>
         <div className="text-[10px] text-slate-600">
-          {observation.reference_period || observation.as_of}
+          {observation ? observation.reference_period || observation.as_of : 'NA'}
         </div>
       </div>
     </button>
