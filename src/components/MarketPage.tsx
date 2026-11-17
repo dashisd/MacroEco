@@ -4,16 +4,13 @@ import type { useEtfData } from '../hooks/useEtfData'
 import { MACRO_TOGGLE_PRESET_IDS } from '../lib/categories'
 import { daysAgoIso } from '../lib/format'
 import { ETF_RATIO_ID_SET, ETF_TOGGLE_ORDER, etfPriceIndicators } from '../lib/etf'
+import { seriesDisplayName } from '../types/database'
 import { SeriesChart } from './SeriesChart'
 import { SeriesDetailModal } from './SeriesDetailModal'
 import { SeriesToggles } from './SeriesToggles'
 import { MarketDataSection } from './MarketDataSection'
-import { SparklineCard } from './SparklineCard'
-import { SparklineSlots } from './SparklineSlots'
 
 type EtfState = ReturnType<typeof useEtfData>
-
-const KPI_IDS = ['sp500', 'nasdaq', 'dji', 't10y2y'] as const
 
 type ModalTarget = { source: 'macro' | 'etf'; id: string }
 
@@ -72,33 +69,9 @@ export function MarketPage({ d, etf, onFocusIndicator }: Props) {
     return [...macro, ...ETF_TOGGLE_ORDER]
   }, [d.availableSeriesIds])
 
-  const kpiItems = KPI_IDS.flatMap((id) => {
-    const observation = visibleObs.get(id)
-    if (!observation) return []
-    const ind = indById.get(id)
-    return [
-      {
-        key: id,
-        node: (
-          <SparklineCard
-            indicatorId={id}
-            name={ind?.name ?? id}
-            observation={observation}
-            series={d.series}
-            unit={observation.unit || ind?.unit}
-            active={d.focusedIndicatorId === id || (modal?.source === 'macro' && modal.id === id)}
-            onOpen={() => {
-              onFocusIndicator(id)
-              setModal({ source: 'macro', id })
-            }}
-          />
-        ),
-      },
-    ]
-  })
-
   const macroModalId = modal?.source === 'macro' ? modal.id : null
   const macroInd = macroModalId ? indById.get(macroModalId) : null
+  const macroName = macroModalId ? seriesDisplayName(macroModalId, macroInd?.name) : ''
   const macroObs = macroModalId ? visibleObs.get(macroModalId) : null
   const macroOhlc = macroModalId ? (d.ohlcById[macroModalId] ?? []) : []
   const macroOhlcLoading =
@@ -112,7 +85,7 @@ export function MarketPage({ d, etf, onFocusIndicator }: Props) {
       : null
 
   const openMacro = (id: string) => {
-    onFocusIndicator(id)
+    if (d.availableSeriesIds.includes(id)) onFocusIndicator(id)
     setModal({ source: 'macro', id })
   }
 
@@ -129,15 +102,17 @@ export function MarketPage({ d, etf, onFocusIndicator }: Props) {
         </div>
       ) : null}
 
-      <section aria-label="市场概览">
-        {d.loading && kpiItems.length === 0 ? (
-          <p className="text-sm text-slate-400">读数加载中…</p>
-        ) : kpiItems.length === 0 ? (
-          <p className="text-sm text-slate-500">该报告日暂无这四项读数。</p>
-        ) : (
-          <SparklineSlots items={kpiItems} />
-        )}
-      </section>
+      <MarketDataSection
+        observations={[...visibleObs.values()]}
+        indicators={d.indicators}
+        series={d.series}
+        focusedId={d.focusedIndicatorId}
+        etf={etf}
+        activeId={modal?.id ?? null}
+        loading={d.loading}
+        onOpenMacro={openMacro}
+        onOpenEtf={(ticker) => setModal({ source: 'etf', id: ticker })}
+      />
 
       <SeriesToggles
         availableIds={toggleIds}
@@ -170,24 +145,13 @@ export function MarketPage({ d, etf, onFocusIndicator }: Props) {
         }}
       />
 
-      <MarketDataSection
-        observations={[...visibleObs.values()]}
-        indicators={d.indicators}
-        series={d.series}
-        focusedId={d.focusedIndicatorId}
-        etf={etf}
-        activeId={modal?.id ?? null}
-        onOpenMacro={openMacro}
-        onOpenEtf={(ticker) => setModal({ source: 'etf', id: ticker })}
-      />
-
-      {macroModalId && macroInd ? (
+      {macroModalId ? (
         <SeriesDetailModal
           open
           onClose={() => setModal(null)}
           indicatorId={macroModalId}
-          name={macroInd.name}
-          unit={macroObs?.unit || macroInd.unit}
+          name={macroName}
+          unit={macroObs?.unit || macroInd?.unit}
           ohlc={macroOhlc}
           ohlcLoading={macroOhlcLoading}
           series={d.series}

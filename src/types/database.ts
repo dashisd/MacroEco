@@ -87,13 +87,51 @@ export interface ReportMeta {
   source_agent: string | null
 }
 
-/** Home chart defaults: the same four series as the 市场追踪 KPI row. */
+/** Home chart defaults: the same four series as the 市场追踪「大盘」cards. */
 export const DEFAULT_SERIES_IDS = [
   'sp500',
   'nasdaq',
   'dji',
   't10y2y',
 ] as const
+
+/**
+ * FX + local-index pairs for the 新兴市场 tag, in card order.
+ * The 4-up grid then places two pairs on each row.
+ * These ids are not in the live database yet; cards render NA until ingest
+ * writes observations and series_1y rows. USD/CNY is the yuan pair.
+ */
+export const EMERGING_MARKET_IDS = [
+  'usd_jpy',
+  'n225',
+  'usd_eur',
+  'stoxx50',
+  'usd_hkd',
+  'hsi',
+  'usd_cny',
+  'csi300',
+] as const
+
+export const SERIES_DISPLAY_NAMES: Record<(typeof EMERGING_MARKET_IDS)[number], string> = {
+  usd_jpy: 'USD/JPY',
+  n225: '日经225',
+  usd_eur: 'USD/EUR',
+  stoxx50: '斯托克欧洲50',
+  usd_hkd: 'USD/HKD',
+  hsi: '恒生指数',
+  usd_cny: 'USD/CNY',
+  csi300: '沪深300',
+}
+
+/** Indicator name from the database, then the frontend catalog, then the id. */
+export function seriesDisplayName(id: string, indicatorName?: string | null): string {
+  const fromDb = indicatorName?.trim()
+  if (fromDb) return fromDb
+  if (Object.prototype.hasOwnProperty.call(SERIES_DISPLAY_NAMES, id)) {
+    return SERIES_DISPLAY_NAMES[id as keyof typeof SERIES_DISPLAY_NAMES]
+  }
+  return id.toUpperCase()
+}
 
 export const SECTION_LABELS: Record<NoteSection, string> = {
   executive: 'Executive 结论',
@@ -117,6 +155,15 @@ export const SERIES_COLORS: Record<string, string> = {
   brent: '#eab308', // yellow
   gold_comex: '#fbbf24', // gold
   btc: '#f97316', // bright orange
+  // 新兴市场（FX + 本地指数，按卡片成对）
+  usd_jpy: '#fb923c', // orange
+  n225: '#c084fc', // purple
+  usd_eur: '#34d399', // emerald
+  stoxx50: '#60a5fa', // blue
+  usd_hkd: '#22d3ee', // cyan
+  hsi: '#e879f9', // fuchsia
+  usd_cny: '#fde047', // yellow
+  csi300: '#ff6b8a', // rose
   // 波动
   vix: '#ef4444', // red
   vixeq: '#06b6d4', // cyan

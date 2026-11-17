@@ -1,5 +1,5 @@
 import type { Indicator } from '../types/database'
-import { SERIES_COLORS } from '../types/database'
+import { SERIES_COLORS, seriesDisplayName } from '../types/database'
 import { SERIES_PRESETS } from '../lib/categories'
 
 interface Props {
@@ -39,7 +39,7 @@ export function SeriesToggles({
   onApplyPreset,
 }: Props) {
   const nameOf = (id: string) =>
-    indicators.find((i) => i.id === id)?.name ?? id.toUpperCase()
+    seriesDisplayName(id, indicators.find((i) => i.id === id)?.name)
 
   const presets = presetIds
     ? SERIES_PRESETS.filter((p) => presetIds.includes(p.id))
