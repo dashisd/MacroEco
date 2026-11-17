@@ -116,6 +116,34 @@ function formatAxisValue(v: number): string {
   return v.toFixed(3)
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+/** Axis tooltip payloads differ by ECharts version: a number, [x, y], or { value }. */
+function tooltipNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim() !== '') {
+    const n = Number(value)
+    return Number.isFinite(n) ? n : null
+  }
+  if (Array.isArray(value)) {
+    for (let i = value.length - 1; i >= 0; i--) {
+      const n = tooltipNumber(value[i])
+      if (n != null) return n
+    }
+    return null
+  }
+  if (value && typeof value === 'object' && 'value' in value) {
+    return tooltipNumber((value as { value: unknown }).value)
+  }
+  return null
+}
+
 function shortUnit(unit: string | null | undefined, id: string): string | undefined {
   if (!unit) {
     // Heuristic when DB unit missing
@@ -422,27 +450,45 @@ export function SeriesChart({
       grid: { left: gridLeft, right: gridRight, top: 48, bottom: 48 },
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(15,23,42,0.92)',
+        confine: true,
+        appendTo: 'body',
+        backgroundColor: 'rgba(15,23,42,0.94)',
         borderColor: '#334155',
         textStyle: { color: '#e2e8f0', fontSize: 12 },
+        extraCssText: 'z-index:40;box-shadow:0 8px 24px rgba(0,0,0,0.35);',
         formatter: (raw: unknown) => {
           const items = (Array.isArray(raw) ? raw : [raw]) as {
             axisValue?: string
-            marker?: string
             seriesName?: string
-            data?: number | null
+            seriesId?: string
+            color?: unknown
+            data?: unknown
+            value?: unknown
           }[]
           if (!items.length) return ''
-          const head = items[0]?.axisValue ?? ''
-          const lines = [`<div style="margin-bottom:4px">${head}</div>`]
+          const head = escapeHtml(String(items[0]?.axisValue ?? ''))
+          const lines = [
+            `<div style="margin-bottom:6px;font-weight:600">${head}</div>`,
+          ]
           for (const it of items) {
-            const v = it.data
-            if (v == null || Number.isNaN(Number(v))) continue
+            const v = tooltipNumber(it.data) ?? tooltipNumber(it.value)
+            if (v == null) continue
+            const fromId = typeof it.seriesId === 'string' ? nameOf(it.seriesId) : ''
+            const name = (it.seriesName ?? '').trim() || fromId
+            if (!name) continue
+            const swatch =
+              typeof it.color === 'string' ? it.color : '#94a3b8'
             lines.push(
-              `${it.marker ?? ''} ${it.seriesName ?? ''}&nbsp;&nbsp;<b>${formatAxisValue(Number(v))}</b>`,
+              `<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin:3px 0">` +
+                `<span style="display:inline-flex;align-items:center;gap:6px">` +
+                `<span style="width:8px;height:8px;border-radius:999px;background:${escapeHtml(swatch)};flex:none"></span>` +
+                `<span>${escapeHtml(name)}</span>` +
+                `</span>` +
+                `<b style="font-variant-numeric:tabular-nums">${formatAxisValue(v)}</b>` +
+                `</div>`,
             )
           }
-          return lines.join('<br/>')
+          return lines.join('')
         },
       },
       legend: {
