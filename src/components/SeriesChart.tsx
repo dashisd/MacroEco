@@ -1,6 +1,7 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
+import { assignYAxes, scaledAxisWindows, type AxisExtent } from '../lib/chartAxes'
 import type { Indicator, SeriesPoint } from '../types/database'
 import { SERIES_COLORS, SERIES_COLOR_FALLBACK, seriesDisplayName } from '../types/database'
 
@@ -14,9 +15,6 @@ interface Props {
   emptyHint?: string
   onSeriesFocus: (id: string | null) => void
 }
-
-const EPS = 1e-12
-const MAG_RATIO = 2
 
 /** YYYY-MM-DD → Sat/Sun (UTC noon to avoid TZ edge). */
 function isWeekend(iso: string): boolean {
@@ -163,12 +161,24 @@ function shortUnit(unit: string | null | undefined, id: string): string | undefi
   return unit
 }
 
-function latestAbs(values: (number | null)[]): number | null {
-  for (let i = values.length - 1; i >= 0; i--) {
-    const v = values[i]
-    if (v != null && Number.isFinite(v)) return Math.abs(v)
+function extentOfAxis(
+  ids: string[],
+  dataById: Map<string, (number | null)[]>,
+  yIndex: Map<string, number>,
+  axis: number,
+): AxisExtent | null {
+  let min = Infinity
+  let max = -Infinity
+  for (const id of ids) {
+    if ((yIndex.get(id) ?? 0) !== axis) continue
+    for (const v of dataById.get(id) ?? []) {
+      if (v == null || !Number.isFinite(v)) continue
+      if (v < min) min = v
+      if (v > max) max = v
+    }
   }
-  return null
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return null
+  return { min, max }
 }
 
 function latestValue(values: (number | null)[]): { index: number; value: number } | null {
@@ -177,108 +187,6 @@ function latestValue(values: (number | null)[]): { index: number; value: number 
     if (v != null && Number.isFinite(v)) return { index: i, value: v }
   }
   return null
-}
-
-/** Assign yAxisIndex by magnitude: if any pair differs by ≥2×, split into 2 right axes. */
-function assignYAxes(
-  ids: string[],
-  dataById: Map<string, (number | null)[]>,
-  colorOf: (id: string) => string,
-): {
-  axisCount: 1 | 2
-  yIndex: Map<string, number>
-  /** Representative color per axis index */
-  axisColor: string[]
-  /** Optional unit hint per axis (from first series in group) */
-  axisUnit: (string | null)[]
-} {
-  const scales = ids
-    .map((id) => {
-      const abs = latestAbs(dataById.get(id) ?? [])
-      return {
-        id,
-        abs: abs ?? 0,
-        log: Math.log10(Math.max(abs ?? 0, EPS)),
-      }
-    })
-    .filter((s) => s.abs > 0)
-
-  const yIndex = new Map<string, number>()
-  if (scales.length === 0) {
-    for (const id of ids) yIndex.set(id, 0)
-    return { axisCount: 1, yIndex, axisColor: ['#94a3b8'], axisUnit: [null] }
-  }
-
-  const absVals = scales.map((s) => s.abs)
-  const ratio = Math.max(...absVals) / Math.min(...absVals)
-  if (ratio < MAG_RATIO) {
-    for (const id of ids) yIndex.set(id, 0)
-    return {
-      axisCount: 1,
-      yIndex,
-      axisColor: [colorOf(scales[0].id)],
-      axisUnit: [null],
-    }
-  }
-
-  // Bucket by round(log10); split at largest gap → low vs high magnitude groups
-  const buckets = new Map<number, typeof scales>()
-  for (const s of scales) {
-    const key = Math.round(s.log)
-    const arr = buckets.get(key) ?? []
-    arr.push(s)
-    buckets.set(key, arr)
-  }
-  const keys = [...buckets.keys()].sort((a, b) => a - b)
-
-  let splitAfter = 0
-  if (keys.length >= 2) {
-    let bestGap = -1
-    for (let i = 0; i < keys.length - 1; i++) {
-      const gap = keys[i + 1]! - keys[i]!
-      if (gap > bestGap) {
-        bestGap = gap
-        splitAfter = i
-      }
-    }
-  } else {
-    // Single bucket but ratio ≥2 (edge): split by median abs
-    const sorted = [...scales].sort((a, b) => a.abs - b.abs)
-    const mid = Math.floor(sorted.length / 2)
-    const lowIds = new Set(sorted.slice(0, mid).map((s) => s.id))
-    for (const s of scales) {
-      yIndex.set(s.id, lowIds.has(s.id) ? 1 : 0)
-    }
-    for (const id of ids) if (!yIndex.has(id)) yIndex.set(id, 0)
-    const high = scales.filter((s) => yIndex.get(s.id) === 0)
-    const low = scales.filter((s) => yIndex.get(s.id) === 1)
-    return {
-      axisCount: 2,
-      yIndex,
-      axisColor: [colorOf(high[0]?.id ?? scales[0].id), colorOf(low[0]?.id ?? scales[0].id)],
-      axisUnit: [null, null],
-    }
-  }
-
-  const lowKeySet = new Set(keys.slice(0, splitAfter + 1))
-  // High magnitude → axis 0 (inner right); low magnitude → axis 1 (outer right)
-  for (const s of scales) {
-    const key = Math.round(s.log)
-    yIndex.set(s.id, lowKeySet.has(key) ? 1 : 0)
-  }
-  for (const id of ids) if (!yIndex.has(id)) yIndex.set(id, 0)
-
-  const high = scales.filter((s) => yIndex.get(s.id) === 0)
-  const low = scales.filter((s) => yIndex.get(s.id) === 1)
-  return {
-    axisCount: 2,
-    yIndex,
-    axisColor: [
-      colorOf(high[0]?.id ?? scales[0].id),
-      colorOf(low[0]?.id ?? scales[0].id),
-    ],
-    axisUnit: [null, null],
-  }
 }
 
 export function SeriesChart({
@@ -294,8 +202,9 @@ export function SeriesChart({
   const nameOf = (id: string) =>
     seriesDisplayName(id, indicators.find((i) => i.id === id)?.name)
   const unitOf = (id: string) => indicators.find((i) => i.id === id)?.unit ?? null
+  const [yScaleMode, setYScaleMode] = useState<'auto' | 'scaled'>('auto')
 
-  const option = useMemo<EChartsOption>(() => {
+  const chart = useMemo(() => {
     const ids = enabledIds.filter((id) =>
       series.some((s) => s.indicator_id === id),
     )
@@ -329,6 +238,19 @@ export function SeriesChart({
 
     const { axisCount, yIndex, axisColor } = assignYAxes(ids, dataById, colorOf)
 
+    const scaledWindows =
+      yScaleMode === 'scaled' && axisCount > 1
+        ? scaledAxisWindows(
+            Array.from({ length: axisCount }, (_, axis) =>
+              extentOfAxis(ids, dataById, yIndex, axis),
+            ),
+          )
+        : null
+    const fixedBounds = (idx: number): { min?: number; max?: number } => {
+      const w = scaledWindows?.[idx]
+      return w ? { min: w.min, max: w.max } : {}
+    }
+
     // Prefer short unit from first series on each axis (点 / % style)
     const unitForAxis = (axisIdx: number): string | undefined => {
       const id = ids.find((i) => (yIndex.get(i) ?? 0) === axisIdx)
@@ -343,6 +265,7 @@ export function SeriesChart({
         return {
           type: 'value' as const,
           scale: true,
+          ...fixedBounds(idx),
           name: unit,
           nameTextStyle: { color, fontSize: 11, padding: [0, 0, 0, 0] },
           position: 'left' as const,
@@ -359,6 +282,7 @@ export function SeriesChart({
       return {
         type: 'value' as const,
         scale: true,
+        ...fixedBounds(idx),
         name: unit,
         nameLocation: 'end' as const,
         nameTextStyle: { color, fontSize: 11, align: 'left' as const },
@@ -376,10 +300,45 @@ export function SeriesChart({
       }
     }
 
+    // Three scales: high stays inner-right, low stays outer-right, middle moves left
+    // so the plot is not squeezed by a third right-hand axis.
+    const buildThirdYAxis = (idx: number) => {
+      const color = axisColor[idx] ?? '#94a3b8'
+      const unit = unitForAxis(idx)
+      const onLeft = idx === 1
+      const offset = idx === 2 ? 56 : 0
+      return {
+        type: 'value' as const,
+        scale: true,
+        ...fixedBounds(idx),
+        name: unit,
+        nameLocation: 'end' as const,
+        nameTextStyle: {
+          color,
+          fontSize: 11,
+          align: onLeft ? ('right' as const) : ('left' as const),
+        },
+        position: onLeft ? ('left' as const) : ('right' as const),
+        offset,
+        axisLabel: {
+          color,
+          formatter: (v: number) => formatAxisValue(v),
+        },
+        axisLine: { show: true, lineStyle: { color, width: 1.5 } },
+        axisTick: { lineStyle: { color } },
+        splitLine:
+          idx === 0
+            ? { show: true, lineStyle: { color: 'rgba(51,65,85,0.55)' } }
+            : { show: false },
+      }
+    }
+
     const yAxis =
       axisCount === 1
         ? buildYAxis(0, false)
-        : [buildYAxis(0, true), buildYAxis(1, true)]
+        : axisCount === 2
+          ? [buildYAxis(0, true), buildYAxis(1, true)]
+          : [buildThirdYAxis(0), buildThirdYAxis(1), buildThirdYAxis(2)]
 
     const echartsSeries = ids.map((id) => {
       const data = dataById.get(id) ?? []
@@ -391,7 +350,7 @@ export function SeriesChart({
       return {
         name: nameOf(id),
         type: 'line' as const,
-        yAxisIndex: axisCount === 2 ? yi : 0,
+        yAxisIndex: axisCount > 1 ? yi : 0,
         showSymbol: false,
         smooth: 0.15,
         connectNulls: true,
@@ -441,10 +400,10 @@ export function SeriesChart({
       }
     })
 
-    const gridRight = axisCount === 2 ? 118 : 72
-    const gridLeft = axisCount === 2 ? 28 : 52
+    const gridRight = axisCount === 1 ? 72 : 118
+    const gridLeft = axisCount === 3 ? 72 : axisCount === 2 ? 28 : 52
 
-    return {
+    const option: EChartsOption = {
       backgroundColor: 'transparent',
       animationDuration: 400,
       grid: { left: gridLeft, right: gridRight, top: 48, bottom: 48 },
@@ -520,7 +479,8 @@ export function SeriesChart({
       ],
       series: echartsSeries,
     }
-  }, [series, enabledIds, indicators, focusedId])
+    return { option, axisCount }
+  }, [series, enabledIds, indicators, focusedId, yScaleMode])
 
   const hasData = series.some(
     (s) => enabledIds.includes(s.indicator_id) && s.value != null,
@@ -553,8 +513,9 @@ export function SeriesChart({
           <p className="max-w-md text-xs leading-relaxed text-slate-500">{emptyHint}</p>
         </div>
       ) : (
+        <div className="relative">
         <ReactECharts
-          option={option}
+          option={chart.option}
           style={{ height: 420, width: '100%' }}
           notMerge
           lazyUpdate
@@ -580,6 +541,30 @@ export function SeriesChart({
             },
           }}
         />
+        {chart.axisCount > 1 ? (
+          <div
+            className="absolute bottom-2 right-2 z-10 inline-flex rounded-md border border-slate-700 bg-slate-950/95 p-0.5 shadow-lg shadow-slate-950/40"
+            role="group"
+            aria-label="Y axis scale"
+          >
+            {(['auto', 'scaled'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={yScaleMode === mode}
+                onClick={() => setYScaleMode(mode)}
+                className={`rounded px-1.5 py-0.5 text-[10px] font-medium tracking-wide transition ${
+                  yScaleMode === mode
+                    ? 'bg-indigo-500/25 text-indigo-200 ring-1 ring-indigo-400/40'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        </div>
       )}
     </div>
   )
