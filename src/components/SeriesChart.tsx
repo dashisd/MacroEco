@@ -1,7 +1,7 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
-import { assignYAxes } from '../lib/chartAxes'
+import { assignYAxes, scaledAxisWindows, type AxisExtent } from '../lib/chartAxes'
 import type { Indicator, SeriesPoint } from '../types/database'
 import { SERIES_COLORS, SERIES_COLOR_FALLBACK, seriesDisplayName } from '../types/database'
 
@@ -161,6 +161,26 @@ function shortUnit(unit: string | null | undefined, id: string): string | undefi
   return unit
 }
 
+function extentOfAxis(
+  ids: string[],
+  dataById: Map<string, (number | null)[]>,
+  yIndex: Map<string, number>,
+  axis: number,
+): AxisExtent | null {
+  let min = Infinity
+  let max = -Infinity
+  for (const id of ids) {
+    if ((yIndex.get(id) ?? 0) !== axis) continue
+    for (const v of dataById.get(id) ?? []) {
+      if (v == null || !Number.isFinite(v)) continue
+      if (v < min) min = v
+      if (v > max) max = v
+    }
+  }
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return null
+  return { min, max }
+}
+
 function latestValue(values: (number | null)[]): { index: number; value: number } | null {
   for (let i = values.length - 1; i >= 0; i--) {
     const v = values[i]
@@ -182,8 +202,9 @@ export function SeriesChart({
   const nameOf = (id: string) =>
     seriesDisplayName(id, indicators.find((i) => i.id === id)?.name)
   const unitOf = (id: string) => indicators.find((i) => i.id === id)?.unit ?? null
+  const [yScaleMode, setYScaleMode] = useState<'auto' | 'scaled'>('auto')
 
-  const option = useMemo<EChartsOption>(() => {
+  const chart = useMemo(() => {
     const ids = enabledIds.filter((id) =>
       series.some((s) => s.indicator_id === id),
     )
@@ -217,6 +238,19 @@ export function SeriesChart({
 
     const { axisCount, yIndex, axisColor } = assignYAxes(ids, dataById, colorOf)
 
+    const scaledWindows =
+      yScaleMode === 'scaled' && axisCount > 1
+        ? scaledAxisWindows(
+            Array.from({ length: axisCount }, (_, axis) =>
+              extentOfAxis(ids, dataById, yIndex, axis),
+            ),
+          )
+        : null
+    const fixedBounds = (idx: number): { min?: number; max?: number } => {
+      const w = scaledWindows?.[idx]
+      return w ? { min: w.min, max: w.max } : {}
+    }
+
     // Prefer short unit from first series on each axis (点 / % style)
     const unitForAxis = (axisIdx: number): string | undefined => {
       const id = ids.find((i) => (yIndex.get(i) ?? 0) === axisIdx)
@@ -231,6 +265,7 @@ export function SeriesChart({
         return {
           type: 'value' as const,
           scale: true,
+          ...fixedBounds(idx),
           name: unit,
           nameTextStyle: { color, fontSize: 11, padding: [0, 0, 0, 0] },
           position: 'left' as const,
@@ -247,6 +282,7 @@ export function SeriesChart({
       return {
         type: 'value' as const,
         scale: true,
+        ...fixedBounds(idx),
         name: unit,
         nameLocation: 'end' as const,
         nameTextStyle: { color, fontSize: 11, align: 'left' as const },
@@ -274,6 +310,7 @@ export function SeriesChart({
       return {
         type: 'value' as const,
         scale: true,
+        ...fixedBounds(idx),
         name: unit,
         nameLocation: 'end' as const,
         nameTextStyle: {
@@ -366,7 +403,7 @@ export function SeriesChart({
     const gridRight = axisCount === 1 ? 72 : 118
     const gridLeft = axisCount === 3 ? 72 : axisCount === 2 ? 28 : 52
 
-    return {
+    const option: EChartsOption = {
       backgroundColor: 'transparent',
       animationDuration: 400,
       grid: { left: gridLeft, right: gridRight, top: 48, bottom: 48 },
@@ -442,7 +479,8 @@ export function SeriesChart({
       ],
       series: echartsSeries,
     }
-  }, [series, enabledIds, indicators, focusedId])
+    return { option, axisCount }
+  }, [series, enabledIds, indicators, focusedId, yScaleMode])
 
   const hasData = series.some(
     (s) => enabledIds.includes(s.indicator_id) && s.value != null,
@@ -475,8 +513,9 @@ export function SeriesChart({
           <p className="max-w-md text-xs leading-relaxed text-slate-500">{emptyHint}</p>
         </div>
       ) : (
+        <div className="relative">
         <ReactECharts
-          option={option}
+          option={chart.option}
           style={{ height: 420, width: '100%' }}
           notMerge
           lazyUpdate
@@ -502,6 +541,30 @@ export function SeriesChart({
             },
           }}
         />
+        {chart.axisCount > 1 ? (
+          <div
+            className="absolute bottom-2 right-2 z-10 inline-flex rounded-md border border-slate-700 bg-slate-950/95 p-0.5 shadow-lg shadow-slate-950/40"
+            role="group"
+            aria-label="Y axis scale"
+          >
+            {(['auto', 'scaled'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={yScaleMode === mode}
+                onClick={() => setYScaleMode(mode)}
+                className={`rounded px-1.5 py-0.5 text-[10px] font-medium tracking-wide transition ${
+                  yScaleMode === mode
+                    ? 'bg-indigo-500/25 text-indigo-200 ring-1 ring-indigo-400/40'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        </div>
       )}
     </div>
   )
