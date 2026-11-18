@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
+import { assignYAxes } from '../lib/chartAxes'
 import type { Indicator, SeriesPoint } from '../types/database'
 import { SERIES_COLORS, SERIES_COLOR_FALLBACK, seriesDisplayName } from '../types/database'
 
@@ -14,9 +15,6 @@ interface Props {
   emptyHint?: string
   onSeriesFocus: (id: string | null) => void
 }
-
-const EPS = 1e-12
-const MAG_RATIO = 2
 
 /** YYYY-MM-DD → Sat/Sun (UTC noon to avoid TZ edge). */
 function isWeekend(iso: string): boolean {
@@ -163,122 +161,12 @@ function shortUnit(unit: string | null | undefined, id: string): string | undefi
   return unit
 }
 
-function latestAbs(values: (number | null)[]): number | null {
-  for (let i = values.length - 1; i >= 0; i--) {
-    const v = values[i]
-    if (v != null && Number.isFinite(v)) return Math.abs(v)
-  }
-  return null
-}
-
 function latestValue(values: (number | null)[]): { index: number; value: number } | null {
   for (let i = values.length - 1; i >= 0; i--) {
     const v = values[i]
     if (v != null && Number.isFinite(v)) return { index: i, value: v }
   }
   return null
-}
-
-/** Assign yAxisIndex by magnitude: if any pair differs by ≥2×, split into 2 right axes. */
-function assignYAxes(
-  ids: string[],
-  dataById: Map<string, (number | null)[]>,
-  colorOf: (id: string) => string,
-): {
-  axisCount: 1 | 2
-  yIndex: Map<string, number>
-  /** Representative color per axis index */
-  axisColor: string[]
-  /** Optional unit hint per axis (from first series in group) */
-  axisUnit: (string | null)[]
-} {
-  const scales = ids
-    .map((id) => {
-      const abs = latestAbs(dataById.get(id) ?? [])
-      return {
-        id,
-        abs: abs ?? 0,
-        log: Math.log10(Math.max(abs ?? 0, EPS)),
-      }
-    })
-    .filter((s) => s.abs > 0)
-
-  const yIndex = new Map<string, number>()
-  if (scales.length === 0) {
-    for (const id of ids) yIndex.set(id, 0)
-    return { axisCount: 1, yIndex, axisColor: ['#94a3b8'], axisUnit: [null] }
-  }
-
-  const absVals = scales.map((s) => s.abs)
-  const ratio = Math.max(...absVals) / Math.min(...absVals)
-  if (ratio < MAG_RATIO) {
-    for (const id of ids) yIndex.set(id, 0)
-    return {
-      axisCount: 1,
-      yIndex,
-      axisColor: [colorOf(scales[0].id)],
-      axisUnit: [null],
-    }
-  }
-
-  // Bucket by round(log10); split at largest gap → low vs high magnitude groups
-  const buckets = new Map<number, typeof scales>()
-  for (const s of scales) {
-    const key = Math.round(s.log)
-    const arr = buckets.get(key) ?? []
-    arr.push(s)
-    buckets.set(key, arr)
-  }
-  const keys = [...buckets.keys()].sort((a, b) => a - b)
-
-  let splitAfter = 0
-  if (keys.length >= 2) {
-    let bestGap = -1
-    for (let i = 0; i < keys.length - 1; i++) {
-      const gap = keys[i + 1]! - keys[i]!
-      if (gap > bestGap) {
-        bestGap = gap
-        splitAfter = i
-      }
-    }
-  } else {
-    // Single bucket but ratio ≥2 (edge): split by median abs
-    const sorted = [...scales].sort((a, b) => a.abs - b.abs)
-    const mid = Math.floor(sorted.length / 2)
-    const lowIds = new Set(sorted.slice(0, mid).map((s) => s.id))
-    for (const s of scales) {
-      yIndex.set(s.id, lowIds.has(s.id) ? 1 : 0)
-    }
-    for (const id of ids) if (!yIndex.has(id)) yIndex.set(id, 0)
-    const high = scales.filter((s) => yIndex.get(s.id) === 0)
-    const low = scales.filter((s) => yIndex.get(s.id) === 1)
-    return {
-      axisCount: 2,
-      yIndex,
-      axisColor: [colorOf(high[0]?.id ?? scales[0].id), colorOf(low[0]?.id ?? scales[0].id)],
-      axisUnit: [null, null],
-    }
-  }
-
-  const lowKeySet = new Set(keys.slice(0, splitAfter + 1))
-  // High magnitude → axis 0 (inner right); low magnitude → axis 1 (outer right)
-  for (const s of scales) {
-    const key = Math.round(s.log)
-    yIndex.set(s.id, lowKeySet.has(key) ? 1 : 0)
-  }
-  for (const id of ids) if (!yIndex.has(id)) yIndex.set(id, 0)
-
-  const high = scales.filter((s) => yIndex.get(s.id) === 0)
-  const low = scales.filter((s) => yIndex.get(s.id) === 1)
-  return {
-    axisCount: 2,
-    yIndex,
-    axisColor: [
-      colorOf(high[0]?.id ?? scales[0].id),
-      colorOf(low[0]?.id ?? scales[0].id),
-    ],
-    axisUnit: [null, null],
-  }
 }
 
 export function SeriesChart({
@@ -376,10 +264,44 @@ export function SeriesChart({
       }
     }
 
+    // Three scales: high stays inner-right, low stays outer-right, middle moves left
+    // so the plot is not squeezed by a third right-hand axis.
+    const buildThirdYAxis = (idx: number) => {
+      const color = axisColor[idx] ?? '#94a3b8'
+      const unit = unitForAxis(idx)
+      const onLeft = idx === 1
+      const offset = idx === 2 ? 56 : 0
+      return {
+        type: 'value' as const,
+        scale: true,
+        name: unit,
+        nameLocation: 'end' as const,
+        nameTextStyle: {
+          color,
+          fontSize: 11,
+          align: onLeft ? ('right' as const) : ('left' as const),
+        },
+        position: onLeft ? ('left' as const) : ('right' as const),
+        offset,
+        axisLabel: {
+          color,
+          formatter: (v: number) => formatAxisValue(v),
+        },
+        axisLine: { show: true, lineStyle: { color, width: 1.5 } },
+        axisTick: { lineStyle: { color } },
+        splitLine:
+          idx === 0
+            ? { show: true, lineStyle: { color: 'rgba(51,65,85,0.55)' } }
+            : { show: false },
+      }
+    }
+
     const yAxis =
       axisCount === 1
         ? buildYAxis(0, false)
-        : [buildYAxis(0, true), buildYAxis(1, true)]
+        : axisCount === 2
+          ? [buildYAxis(0, true), buildYAxis(1, true)]
+          : [buildThirdYAxis(0), buildThirdYAxis(1), buildThirdYAxis(2)]
 
     const echartsSeries = ids.map((id) => {
       const data = dataById.get(id) ?? []
@@ -391,7 +313,7 @@ export function SeriesChart({
       return {
         name: nameOf(id),
         type: 'line' as const,
-        yAxisIndex: axisCount === 2 ? yi : 0,
+        yAxisIndex: axisCount > 1 ? yi : 0,
         showSymbol: false,
         smooth: 0.15,
         connectNulls: true,
@@ -441,8 +363,8 @@ export function SeriesChart({
       }
     })
 
-    const gridRight = axisCount === 2 ? 118 : 72
-    const gridLeft = axisCount === 2 ? 28 : 52
+    const gridRight = axisCount === 1 ? 72 : 118
+    const gridLeft = axisCount === 3 ? 72 : axisCount === 2 ? 28 : 52
 
     return {
       backgroundColor: 'transparent',
