@@ -1,5 +1,5 @@
 /**
- * Upsert ~5y daily bars for the phase-1 US ETF universe into etf_prices,
+ * Upsert ~5y daily bars for the 31-ticker US ETF universe into etf_prices,
  * then upsert the five relative-strength ratios into etf_ratio_series.
  *
  * Ratios use adj_close (total return). If adj_close is null, that leg falls
@@ -30,6 +30,9 @@ const UNIVERSE = [
   ['XLP', 'Consumer Staples Select Sector SPDR', 'sector', 'SSGA', 100],
   ['XLU', 'Utilities Select Sector SPDR', 'sector', 'SSGA', 110],
   ['XBI', 'SPDR S&P Biotech ETF', 'sector', 'SSGA', 115],
+  ['XLY', 'Consumer Discretionary Select Sector SPDR', 'sector', 'SSGA', 116],
+  ['XLC', 'Communication Services Select Sector SPDR', 'sector', 'SSGA', 117],
+  ['XLB', 'Materials Select Sector SPDR', 'sector', 'SSGA', 118],
   ['HYG', 'iShares iBoxx High Yield Corporate', 'credit_rates', 'iShares', 120],
   ['LQD', 'iShares iBoxx Investment Grade Corporate', 'credit_rates', 'iShares', 130],
   ['TLT', 'iShares 20+ Year Treasury Bond', 'credit_rates', 'iShares', 140],
@@ -38,6 +41,14 @@ const UNIVERSE = [
   ['MTUM', 'iShares MSCI USA Momentum Factor ETF', 'style_theme', 'iShares', 170],
   ['QUAL', 'iShares MSCI USA Quality Factor ETF', 'style_theme', 'iShares', 180],
   ['ARKK', 'ARK Innovation ETF', 'style_theme', 'ARK', 190],
+  ['VPU', 'Vanguard Utilities ETF', 'style_theme', 'Vanguard', 200],
+  ['VHT', 'Vanguard Health Care ETF', 'style_theme', 'Vanguard', 210],
+  ['VTV', 'Vanguard Value ETF', 'style_theme', 'Vanguard', 220],
+  ['VT', 'Vanguard Total World Stock ETF', 'style_theme', 'Vanguard', 230],
+  ['KBE', 'SPDR S&P Bank ETF', 'style_theme', 'SSGA', 240],
+  ['IGV', 'iShares Expanded Tech-Software Sector ETF', 'style_theme', 'iShares', 250],
+  ['VGT', 'Vanguard Information Technology ETF', 'style_theme', 'Vanguard', 260],
+  ['MAGS', 'Roundhill Magnificent Seven ETF', 'style_theme', 'Roundhill', 270],
 ]
 
 const RATIOS = [

@@ -18,7 +18,7 @@ export interface EtfRatioDef {
   denominator: string
 }
 
-/** Phase-1 universe. Matches supabase/migrations/001_etf_phase1_prices_and_ratios.sql. */
+/** 31-ticker board catalog. A close is shown only when etf_prices already has one. */
 export const ETF_CATALOG: EtfCatalogEntry[] = [
   { ticker: 'SPY', name: 'SPDR S&P 500 ETF', group_id: 'broad', issuer: 'SSGA', sort_order: 10 },
   { ticker: 'RSP', name: 'Invesco S&P 500 Equal Weight', group_id: 'broad', issuer: 'Invesco', sort_order: 20 },
@@ -32,6 +32,9 @@ export const ETF_CATALOG: EtfCatalogEntry[] = [
   { ticker: 'XLP', name: 'Consumer Staples Select Sector SPDR', group_id: 'sector', issuer: 'SSGA', sort_order: 100 },
   { ticker: 'XLU', name: 'Utilities Select Sector SPDR', group_id: 'sector', issuer: 'SSGA', sort_order: 110 },
   { ticker: 'XBI', name: 'SPDR S&P Biotech ETF', group_id: 'sector', issuer: 'SSGA', sort_order: 115 },
+  { ticker: 'XLY', name: 'Consumer Discretionary Select Sector SPDR', group_id: 'sector', issuer: 'SSGA', sort_order: 116 },
+  { ticker: 'XLC', name: 'Communication Services Select Sector SPDR', group_id: 'sector', issuer: 'SSGA', sort_order: 117 },
+  { ticker: 'XLB', name: 'Materials Select Sector SPDR', group_id: 'sector', issuer: 'SSGA', sort_order: 118 },
   { ticker: 'HYG', name: 'iShares iBoxx High Yield Corporate', group_id: 'credit_rates', issuer: 'iShares', sort_order: 120 },
   { ticker: 'LQD', name: 'iShares iBoxx Investment Grade Corporate', group_id: 'credit_rates', issuer: 'iShares', sort_order: 130 },
   { ticker: 'TLT', name: 'iShares 20+ Year Treasury Bond', group_id: 'credit_rates', issuer: 'iShares', sort_order: 140 },
@@ -40,6 +43,14 @@ export const ETF_CATALOG: EtfCatalogEntry[] = [
   { ticker: 'MTUM', name: 'iShares MSCI USA Momentum Factor ETF', group_id: 'style_theme', issuer: 'iShares', sort_order: 170 },
   { ticker: 'QUAL', name: 'iShares MSCI USA Quality Factor ETF', group_id: 'style_theme', issuer: 'iShares', sort_order: 180 },
   { ticker: 'ARKK', name: 'ARK Innovation ETF', group_id: 'style_theme', issuer: 'ARK', sort_order: 190 },
+  { ticker: 'VPU', name: 'Vanguard Utilities ETF', group_id: 'style_theme', issuer: 'Vanguard', sort_order: 200 },
+  { ticker: 'VHT', name: 'Vanguard Health Care ETF', group_id: 'style_theme', issuer: 'Vanguard', sort_order: 210 },
+  { ticker: 'VTV', name: 'Vanguard Value ETF', group_id: 'style_theme', issuer: 'Vanguard', sort_order: 220 },
+  { ticker: 'VT', name: 'Vanguard Total World Stock ETF', group_id: 'style_theme', issuer: 'Vanguard', sort_order: 230 },
+  { ticker: 'KBE', name: 'SPDR S&P Bank ETF', group_id: 'style_theme', issuer: 'SSGA', sort_order: 240 },
+  { ticker: 'IGV', name: 'iShares Expanded Tech-Software Sector ETF', group_id: 'style_theme', issuer: 'iShares', sort_order: 250 },
+  { ticker: 'VGT', name: 'Vanguard Information Technology ETF', group_id: 'style_theme', issuer: 'Vanguard', sort_order: 260 },
+  { ticker: 'MAGS', name: 'Roundhill Magnificent Seven ETF', group_id: 'style_theme', issuer: 'Roundhill', sort_order: 270 },
 ]
 
 export const ETF_GROUP_ORDER: { id: EtfGroupId; label: string }[] = [
@@ -68,7 +79,8 @@ export const ETF_TICKER_SET = new Set(ETF_TICKERS)
 
 /**
  * 市场追踪 series-toggle order. Every catalog ticker once, as a price series.
- * Not the SPY/RSP-style ratio pairs.
+ * The original 20 stay in place; XLY, XLC, XLB and the eight strategy tickers
+ * are appended. Not the SPY/RSP-style ratio pairs.
  */
 export const ETF_TOGGLE_ORDER = [
   'SPY',
@@ -91,6 +103,17 @@ export const ETF_TOGGLE_ORDER = [
   'QUAL',
   'ARKK',
   'SGOV',
+  'XLY',
+  'XLC',
+  'XLB',
+  'VPU',
+  'VHT',
+  'VTV',
+  'VT',
+  'KBE',
+  'IGV',
+  'VGT',
+  'MAGS',
 ] as const
 
 /** Price-group presets select these single tickers. They are not chart defaults. */

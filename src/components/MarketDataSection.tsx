@@ -69,15 +69,30 @@ const TABS: { id: string; label: string; slots: Slot[] }[] = [
   {
     id: 'sector',
     label: '行业 ETF',
-    slots: ['XLK', 'XLF', 'XLI', 'XLE', 'XLV', 'XLP', 'XLU', 'XBI'].map((ticker) => ({
-      kind: 'etf' as const,
-      ticker,
-    })),
+    slots: ['XLK', 'XLF', 'XLI', 'XLE', 'XLV', 'XLP', 'XLU', 'XBI', 'XLY', 'XLC', 'XLB'].map(
+      (ticker) => ({
+        kind: 'etf' as const,
+        ticker,
+      }),
+    ),
   },
   {
     id: 'strategy',
     label: '策略 ETF',
-    slots: ['SCHD', 'MTUM', 'QUAL', 'ARKK'].map((ticker) => ({
+    slots: [
+      'SCHD',
+      'MTUM',
+      'QUAL',
+      'ARKK',
+      'VPU',
+      'VHT',
+      'VTV',
+      'VT',
+      'KBE',
+      'IGV',
+      'VGT',
+      'MAGS',
+    ].map((ticker) => ({
       kind: 'etf' as const,
       ticker,
     })),

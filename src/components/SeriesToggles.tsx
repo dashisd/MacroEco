@@ -1,6 +1,10 @@
+import { useState } from 'react'
 import type { Indicator } from '../types/database'
 import { SERIES_COLORS, seriesDisplayName } from '../types/database'
 import { SERIES_PRESETS } from '../lib/categories'
+import { ETF_CATALOG } from '../lib/etf'
+
+const ETF_CATALOG_NAME = new Map(ETF_CATALOG.map((entry) => [entry.ticker, entry.name]))
 
 interface Props {
   availableIds: string[]
@@ -38,6 +42,7 @@ export function SeriesToggles({
   onFocus,
   onApplyPreset,
 }: Props) {
+  const [tipId, setTipId] = useState<string | null>(null)
   const nameOf = (id: string) =>
     seriesDisplayName(id, indicators.find((i) => i.id === id)?.name)
 
@@ -120,24 +125,38 @@ export function SeriesToggles({
             const on = enabledIds.includes(id)
             const color = SERIES_COLORS[id] ?? '#94a3b8'
             const focused = focusedId === id
+            const label = nameOf(id)
+            const fullName = ETF_CATALOG_NAME.get(id) ?? label
             return (
               <button
                 key={id}
                 type="button"
                 onClick={() => onToggle(id)}
                 onDoubleClick={() => onFocus(focused ? null : id)}
-                title="单击开关；双击聚焦并联动解释"
-                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition ${
+                onMouseEnter={() => setTipId(id)}
+                onMouseLeave={() => setTipId((current) => (current === id ? null : current))}
+                onFocus={() => setTipId(id)}
+                onBlur={() => setTipId((current) => (current === id ? null : current))}
+                aria-label={fullName}
+                className={`relative inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition ${
                   on
                     ? 'border-slate-600 bg-slate-800 text-slate-100'
                     : 'border-slate-800 bg-slate-950 text-slate-500'
                 } ${focused ? 'ring-2 ring-cyan-400/60' : ''}`}
               >
+                {tipId === id ? (
+                  <span
+                    role="tooltip"
+                    className="pointer-events-none absolute bottom-full left-0 z-30 mb-1 w-max whitespace-nowrap rounded-md border border-slate-600 bg-slate-950 px-2 py-1 text-left text-[11px] font-medium leading-snug text-slate-100 shadow-lg"
+                  >
+                    {fullName}
+                  </span>
+                ) : null}
                 <span
                   className="h-2 w-2 rounded-full"
                   style={{ background: on ? color : '#475569' }}
                 />
-                {nameOf(id)}
+                {label}
               </button>
             )
           })
